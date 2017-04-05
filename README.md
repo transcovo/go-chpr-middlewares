@@ -1,2 +1,2 @@
-# chpr-go-middlewares
+# go-chpr-middlewares
 CP Middleware in Go
