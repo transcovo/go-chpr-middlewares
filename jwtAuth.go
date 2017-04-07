@@ -6,21 +6,11 @@ import (
 	"fmt"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
+	"github.com/transcovo/go-chpr-logger"
 	"io"
 	"net/http"
 	"regexp"
 )
-
-/*
-Handler is the simplest possible signature compatible with net/http
-*/
-type Handler func(http.ResponseWriter, *http.Request)
-
-/*
-Middleware is a function that wraps a handler and returns a new
-handler with more features
-*/
-type Middleware func(Handler) Handler
 
 /*
 RawToken is an alias for string containing an authentication token
@@ -41,7 +31,7 @@ See example from https://godoc.org/github.com/dgrijalva/jwt-go#ParseWithClaims
 type TokenClaims struct {
 	jwt.StandardClaims
 	DisplayName string `json:"display_name"`
-	Roles []Role `json:"roles"`
+	Roles       []Role `json:"roles"`
 }
 
 /*
@@ -49,6 +39,10 @@ EmptyToken is a shortcut for better readability
 */
 const EmptyToken = RawToken("")
 
+/*
+ContextKey created because Context cannot use plain strings
+https://medium.com/@matryer/context-keys-in-go-5312346a868d
+*/
 type ContextKey string
 
 /*
@@ -71,8 +65,10 @@ JwtAuthenticationMiddleware returns a middleware that:
 - checks the Token from the Authorization header with a public key
 - replies a 401 Unauthorized if could not find a valid token (missing, expired, bad signature)
 - parses the claims and add them to the request context if the token is valid
+Panics if fails to parse the public key
 */
-func JwtAuthenticationMiddleware(publicKey *rsa.PublicKey) Middleware {
+func JwtAuthenticationMiddleware(publicKeyString string) Middleware {
+	publicKey := parsePublicKey(publicKeyString)
 	return func(next Handler) Handler {
 		return func(res http.ResponseWriter, req *http.Request) {
 			token := retrieveTokenFromHeader(req)
@@ -86,6 +82,15 @@ func JwtAuthenticationMiddleware(publicKey *rsa.PublicKey) Middleware {
 			next(res, req)
 		}
 	}
+}
+
+func parsePublicKey(publicKeyString string) *rsa.PublicKey {
+	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(publicKeyString))
+	if err != nil {
+		logger.WithField("err", err).Error("[JwtAuthenticationMiddleware] Failed to parse public key")
+		panic(err)
+	}
+	return publicKey
 }
 
 func retrieveTokenFromHeader(req *http.Request) RawToken {

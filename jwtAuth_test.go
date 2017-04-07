@@ -15,7 +15,7 @@ func fake200Handler(res http.ResponseWriter, req *http.Request) {
 }
 
 func TestMiddleware_Unauthorized(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.GetRsaPublicKey())
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.RawRsaPublicKey)
 	wrappedHandler := jwtMiddleware(fake200Handler)
 	recorder := httptest.NewRecorder()
 	wrappedHandler(recorder, &http.Request{})
@@ -26,7 +26,7 @@ func TestMiddleware_Unauthorized(t *testing.T) {
 }
 
 func TestMiddleware_ValidToken(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.GetRsaPublicKey())
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.RawRsaPublicKey)
 	wrappedHandler := jwtMiddleware(fake200Handler)
 
 	recorder := httptest.NewRecorder()
@@ -34,6 +34,18 @@ func TestMiddleware_ValidToken(t *testing.T) {
 	wrappedHandler(recorder, &http.Request{Header: headers})
 	res := recorder.Result()
 	assert.Equal(t, 200, res.StatusCode)
+}
+
+func TestParsePublicKey_ValidKey(t *testing.T) {
+	parsed := parsePublicKey(fixtures.RawRsaPublicKey)
+	assert.Equal(t, fixtures.GetRsaPublicKey(), parsed)
+}
+
+func TestParsePublicKey_InvalidKey(t *testing.T) {
+	parseInvalidKey := func() {
+		parsePublicKey("not a key !")
+	}
+	assert.Panics(t, parseInvalidKey)
 }
 
 func TestRetrieveTokenFromHeader_Nil(t *testing.T) {
