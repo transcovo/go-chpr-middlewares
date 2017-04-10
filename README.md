@@ -7,8 +7,9 @@
 ----------------- 
 
 This library regroups HTTP middleware to be used in our golang servers.
-A middleware is a function taking an `Handler` and returning an `Handler`,
-where a `Handler` is a function with the signature `func(http.ResponseWriter, *http.Request)`.
+A middleware is a function taking a `http.HandlerFunc` and returning a `http.HandlerFunc`.
+`http.HandlerFunc` is a function with the signature `func(http.ResponseWriter, *http.Request)`.
+It implements the interface `http.Handler`.
 
 See the [godoc](https://godoc.org/github.com/transcovo/go-chpr-middlewares)
 

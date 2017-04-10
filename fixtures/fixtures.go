@@ -2,17 +2,18 @@ package fixtures
 
 import (
 	"crypto/rsa"
+
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
 /*
 RawRsaPublicKey is the public key corresponding to the private key used to generate the following token fixtures
- */
+*/
 const RawRsaPublicKey = "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAxHWGhSkfYnbgHYKJ/KVG\ndBJ3pMoRsbl43x/H+0knzBl0IKR7Btk2PR5VGk9xelOCQQmyepyG0nfycThm5+1U\nDFFv/WMRMg3YHKocHMJ78HvjBhzBETWnM3xywmHqmDPc8RKPLsjVwpLn0ohJ94V7\nqz3ghttTJN7OquAELkxOHxb6O9lJcCcku/ZbttggrP32abh5KhpCtl/5sodMixiA\nfrx+s6NIdyvlYj8Y2UmhyPYzso/tCqiYByBZPHmjrJDTQHgppgU+gMjbrek8pl9u\nP555Al2ejqJ0hRtPfEW09hh3jcr4G8ltEisJLJsay4D2DrkbIT6XPi75o79203xz\nllod62g9Bcwi8jqdonRRyWIdswhFjX4CtscLxdllQaaPtorVGDuKJdByBJq6adTB\nwH8YKBMNEOflZAUFiRVnYPYMZ4IEhRCyWk6u6U+5OdQlg6vGHd2TcQ3xU1qbTu+I\nQyB8SePMRd5XkZfd0D/stAjtrH4mKre5fNBd7G9g8xhXov4UzXjrfm5hfcvJQAPG\n63EDWTd39zAIAee1DUT8ZXj58YaEKYcZEOm2q/z/JF+D0WG6YVktJlGrO7DSOFAA\nFC04z/LXuPbCi5MgNIx8c2ulfuHPXzysKTYmN0jv5vBYrU9VofSP35OeUjz24WBf\nJgiKJMLoQ8MMgLNHOPS3bQECAwEAAQ==\n-----END PUBLIC KEY-----"
 
 /*
 GetRsaPublicKey returns the rsa public key to verify the following tokens
- */
+*/
 func GetRsaPublicKey() *rsa.PublicKey {
 	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(RawRsaPublicKey))
 	if err != nil {

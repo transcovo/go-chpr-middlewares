@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 
@@ -36,6 +35,32 @@ type TokenClaims struct {
 }
 
 /*
+ErrInvalidToken returned when the token is ill-formatted, not matching the signature, expired
+*/
+var ErrInvalidToken = errors.New("invalid token")
+
+/*
+ErrInvalidClaims returned when the token claims do not respect the CP format
+*/
+var ErrInvalidClaims = errors.New("invalid token claims")
+
+/*
+ErrMissingPublicKey returned when the public key has not been passed
+*/
+var ErrMissingPublicKey = errors.New("missing public key")
+
+/*
+ErrInvalidAlgorithm is returned when the JWT algorithm does not match
+*/
+type ErrInvalidAlgorithm struct {
+	Algorithm interface{}
+}
+
+func (err ErrInvalidAlgorithm) Error() string {
+	return fmt.Sprintf("unexpected signing method: %v", err.Algorithm)
+}
+
+/*
 EmptyToken is a shortcut for better readability
 */
 const EmptyToken = RawToken("")
@@ -50,7 +75,7 @@ type ContextKey string
 String method added as suggested in https://medium.com/@matryer/context-keys-in-go-5312346a868d
 */
 func (key ContextKey) String() string {
-	return "ContextKey(\"" + string(key) + "\")"
+	return fmt.Sprintf(`ContextKey("%s")`, string(key))
 }
 
 /*
@@ -59,12 +84,12 @@ TokenClaimsContextKey is used to store the token claims in the request context
 */
 const TokenClaimsContextKey = ContextKey("TokenClaims")
 
-var bearerRegex = regexp.MustCompile("^Bearer\\s(\\S+)$")
+var bearerRegex = regexp.MustCompile(`^Bearer\s(\S+)$`)
 
 /*
 JwtAuthenticationMiddleware returns a middleware that:
 - checks the Token from the Authorization header with a public key
-- replies a 401 Unauthorized if could not find a valid token (missing, expired, bad signature)
+- replies a 401 Unauthorized if it could not find a valid token (missing, expired, bad signature)
 - parses the claims and add them to the request context if the token is valid
 Panics if fails to parse the public key
 */
@@ -75,7 +100,7 @@ func JwtAuthenticationMiddleware(publicKeyString string) Middleware {
 			token := retrieveTokenFromHeader(req)
 			claims, err := validateTokenAndExtractClaims(token, publicKey)
 			if err != nil {
-				respond401Unauthorized(res)
+				Respond401Unauthorized(res)
 				return
 			}
 			ctx := context.WithValue(req.Context(), TokenClaimsContextKey, claims)
@@ -108,11 +133,11 @@ func retrieveTokenFromHeader(req *http.Request) RawToken {
 
 func validateTokenAndExtractClaims(rawToken RawToken, publicKey *rsa.PublicKey) (*TokenClaims, error) {
 	if publicKey == nil {
-		return nil, errors.New("missing public key")
+		return nil, ErrMissingPublicKey
 	}
 	parsed, err := jwt.ParseWithClaims(string(rawToken), &TokenClaims{}, func(parsed *jwt.Token) (interface{}, error) {
 		if _, ok := parsed.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", parsed.Header["alg"])
+			return nil, &ErrInvalidAlgorithm{parsed.Header["alg"]}
 		}
 		return publicKey, nil
 	})
@@ -124,16 +149,18 @@ func validateTokenAndExtractClaims(rawToken RawToken, publicKey *rsa.PublicKey) 
 
 func extractClaims(parsed *jwt.Token) (*TokenClaims, error) {
 	if !parsed.Valid {
-		return nil, errors.New("invalid token")
+		return nil, ErrInvalidToken
 	}
 	claims, ok := parsed.Claims.(*TokenClaims)
 	if !ok {
-		return nil, errors.New("invalid token claims")
+		return nil, ErrInvalidClaims
 	}
 	return claims, nil
 }
 
-func respond401Unauthorized(res http.ResponseWriter) {
-	res.WriteHeader(http.StatusUnauthorized)
-	io.WriteString(res, "Unauthorized")
+/*
+Respond401Unauthorized handles the case when authentication fails
+*/
+func Respond401Unauthorized(res http.ResponseWriter) {
+	http.Error(res, "Unauthorized", http.StatusUnauthorized)
 }

@@ -1,13 +1,14 @@
 package middleware
 
 import (
-	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/stretchr/testify/assert"
-	"github.com/transcovo/go-chpr-middlewares/fixtures"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/stretchr/testify/assert"
+	"github.com/transcovo/go-chpr-middlewares/fixtures"
 )
 
 func fake200Handler(res http.ResponseWriter, req *http.Request) {
@@ -22,7 +23,7 @@ func TestMiddleware_Unauthorized(t *testing.T) {
 	res := recorder.Result()
 	assert.Equal(t, 401, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Equal(t, "Unauthorized", string(body))
+	assert.Equal(t, "Unauthorized\n", string(body))
 }
 
 func TestMiddleware_ValidToken(t *testing.T) {
@@ -129,14 +130,14 @@ func TestExtractClaims_InvalidClaims(t *testing.T) {
 
 func TestRespond401Unauthorized(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	respond401Unauthorized(recorder)
+	Respond401Unauthorized(recorder)
 	res := recorder.Result()
 	assert.Equal(t, 401, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Equal(t, "Unauthorized", string(body))
+	assert.Equal(t, "Unauthorized\n", string(body))
 }
 
 func TestContextKey_String(t *testing.T) {
 	keyString := TokenClaimsContextKey.String()
-	assert.Equal(t, "ContextKey(\"TokenClaims\")", keyString)
+	assert.Equal(t, `ContextKey("TokenClaims")`, keyString)
 }
