@@ -4,12 +4,13 @@ import (
 	"context"
 	"crypto/rsa"
 	"fmt"
-	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/pkg/errors"
-	"github.com/transcovo/go-chpr-logger"
 	"io"
 	"net/http"
 	"regexp"
+
+	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/pkg/errors"
+	logger "github.com/transcovo/go-chpr-logger"
 )
 
 /*
@@ -69,7 +70,7 @@ Panics if fails to parse the public key
 */
 func JwtAuthenticationMiddleware(publicKeyString string) Middleware {
 	publicKey := parsePublicKey(publicKeyString)
-	return func(next Handler) Handler {
+	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
 			token := retrieveTokenFromHeader(req)
 			claims, err := validateTokenAndExtractClaims(token, publicKey)
