@@ -11,13 +11,9 @@ import (
 	"github.com/transcovo/go-chpr-middlewares/fixtures"
 )
 
-func fake200Handler(res http.ResponseWriter, req *http.Request) {
-	res.WriteHeader(http.StatusOK)
-}
-
 func TestMiddleware_Unauthorized(t *testing.T) {
 	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey)
-	wrappedHandler := jwtMiddleware(fake200Handler)
+	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 	recorder := httptest.NewRecorder()
 	wrappedHandler(recorder, &http.Request{})
 	res := recorder.Result()
@@ -28,7 +24,7 @@ func TestMiddleware_Unauthorized(t *testing.T) {
 
 func TestMiddleware_ValidToken(t *testing.T) {
 	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey)
-	wrappedHandler := jwtMiddleware(fake200Handler)
+	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
 	recorder := httptest.NewRecorder()
 	headers := http.Header{"Authorization": {"Bearer " + fixtures.Fixtures.TokenValidWithRiderRole}}

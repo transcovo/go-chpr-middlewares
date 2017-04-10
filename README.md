@@ -31,13 +31,15 @@ go get -u github.com/transcovo/go-chpr-middlewares
  
 ## Available middleware
 
-### JwtAuthenticationMiddleware
-
 ```golang
 import (
   middleware "github.com/transcovo/go-chpr-middlewares"
 )
+```
 
+### JwtAuthenticationMiddleware
+
+```golang
 publicKeyString := getMyPublicKeyFromConfig()
 authMiddleware := middleware.JwtAuthenticationMiddleware(publicKeyString)
 
@@ -49,8 +51,24 @@ wrappedHandler := authMiddleware(MyHandler)
 ```
 
 Based on [the jwt go lib](https://github.com/dgrijalva/jwt-go).
- 
-## Misc 
+
+### RoleAuthorizationMiddleware
+
+* Important ! * Needs to be added after a JwtAuthenticationMiddleware to be able to access the user roles
+from the token claims.
+
+```golang
+authMiddleware := middleware.JwtAuthenticationMiddleware(publicKeyString)
+adminOnlyMiddleware := middleware.RoleAuthorizationMiddleware("cp:employee:", "cp:machine:")
+
+func MyHandler(http.ResponseWriter, *http.Request) {
+  /* does something */
+}
+
+wrappedHandler := authMiddleware(roleMiddleware(MyHandler))
+```
+
+## Misc
  
 The policy for this lib regarding vendoring is not to include any dependency.
 The main reason for this is to avoid any conflict between your project and go-chpr-middlewares. 

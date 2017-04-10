@@ -9,6 +9,7 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"io/ioutil"
+	"net/http"
 
 	jwt "github.com/dgrijalva/jwt-go"
 )
@@ -46,4 +47,11 @@ func GetRsaPublicKey() *rsa.PublicKey {
 		panic(err)
 	}
 	return publicKey
+}
+
+/*
+Fake200Handler is a dead-simple http.HandlerFunc returning a 200 OK
+*/
+func Fake200Handler(res http.ResponseWriter, req *http.Request) {
+	res.WriteHeader(http.StatusOK)
 }
