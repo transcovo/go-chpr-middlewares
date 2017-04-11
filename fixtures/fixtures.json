@@ -1,0 +1,54 @@
+{
+  "Claims": {
+    "TokenExpired": {
+      "display_name": "Carl De la Batte",
+      "exp": 1485969700,
+      "iat": 1453225473,
+      "iss": "ab90bc58ef76",
+      "roles": [
+        {
+          "name": "cp:client:rider:"
+        }
+      ],
+      "sub": "ab90bc58ef76"
+    },
+    "TokenValidWithRiderRole": {
+      "display_name": "Alfred Bernard",
+      "iat": 1453225473,
+      "iss": "58ef76ab90bc",
+      "roles": [
+        {
+          "name": "cp:client:rider:"
+        }
+      ],
+      "sub": "58ef76ab90bc"
+    },
+    "TokenWithInvalidAlgorithm": {
+      "display_name": "Alfred Bernard",
+      "iat": 1453225473,
+      "iss": "58ef76ab90bc",
+      "roles": [
+        {
+          "name": "cp:client:rider:"
+        }
+      ],
+      "sub": "58ef76ab90bc"
+    },
+    "TokenWithInvalidSignature": {
+      "display_name": "Alfred Bernard",
+      "iat": 1453225473,
+      "iss": "58ef76ab90bc",
+      "roles": [
+        {
+          "name": "cp:client:rider:"
+        }
+      ],
+      "sub": "58ef76ab90bc"
+    }
+  },
+  "RawRsaPublicKey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtevF351Fhqi1LYTAtMxH\nRDuF2RI7wmpIPNCLw8g8fMNAKbRWzn/D3pG5iu22VTkl+80ikFQFv62F9iYx4IMv\ngX5U5jePbu3oH1F8pcCiRzjBZCr40OXmEnXjCGsokfItEZZfEUFUQUj79EehOelE\nMKdnTwPdEOvwUpknp82OUu4pK4zRnTnrWhkKFkNF8qCLiluwGkp664CBRoI3k7TY\nf2S0nZXnukTrxmiZ/M0pva3HtXWMoK46yM2ABBTRBWp2srxRAXlR3jtiai5sX1di\n8+4W2qscbRePrtUI1zcQoqhiZO2Cblk9z1yAiQbuE7U1r003w4Mwz5xzI+TK05KV\n9QIDAQAB\n-----END PUBLIC KEY-----\n",
+  "TokenExpired": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaXNwbGF5X25hbWUiOiJDYXJsIERlIGxhIEJhdHRlIiwiZXhwIjoxNDg1OTY5NzAwLCJpYXQiOjE0NTMyMjU0NzMsImlzcyI6ImFiOTBiYzU4ZWY3NiIsInJvbGVzIjpbeyJuYW1lIjoiY3A6Y2xpZW50OnJpZGVyOiJ9XSwic3ViIjoiYWI5MGJjNThlZjc2In0.JrucrbpfM5vO7Iz3bWGtlPne382GCpmEYpWhPVKwSEmxK1j5Q_icatdsOpSRnRHRtrex0wmUFIWIY6osodakVQw4Rwd5WnMDAQb11bINRlBhKWNGaRiApEfWZCwFemMktD35PP9ZM9eoo-9WFS6z6CABrzMOZKZt7IdkzMqheaXAgK0vFr1LgwEj4TokvsC1U9eHrEISMfveR_VFoaz-8nlQd_d4RMagnZrx6mbUyAx05RnXAGA1Ig9u1pCVFx-wP7M1r2HIFMVyOhJw0UrJbRFhqgoZp8R7EoMax9PER-ZPuPCj-69hTYAjmkob1Ujt5z2ZLMA6xO1ATA_2KCQwhA",
+  "TokenValidWithRiderRole": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaXNwbGF5X25hbWUiOiJBbGZyZWQgQmVybmFyZCIsImlhdCI6MTQ1MzIyNTQ3MywiaXNzIjoiNThlZjc2YWI5MGJjIiwicm9sZXMiOlt7Im5hbWUiOiJjcDpjbGllbnQ6cmlkZXI6In1dLCJzdWIiOiI1OGVmNzZhYjkwYmMifQ.PFod4WRIbzc2b3Khip7Ds0mg4Czso6dQnn79XBJVV9TW2ST3Prn2B7_FsWFw_r1hBZeAmjhDwa77qoIAnTxrXzZl_4lHRaiTfFpTLuJ-J6Hbvm74iNqVWyAVl_SaE5_NlnfCrei0KY6_C_0HSjqLTfrrs7euEWPxYZQQwCD3FJufR9kHuNe5EQlmPSFhekgqwx2cKJQyLI_m9m1i7KUA-tgyx9of1v5m0VySiO3BZNafVeUVCNWs_5Dzp7_xVYcDn9Cizhch-eFZdCcdcAF0P6XpSQ-TnUNRGWT8Bq6BHYyYN06PmIwOc7Lb6x2f5MD-FaliEd2tCRY2Oee-oZ1Rxw",
+  "TokenWithInvalidAlgorithm": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaXNwbGF5X25hbWUiOiJBbGZyZWQgQmVybmFyZCIsImlhdCI6MTQ1MzIyNTQ3MywiaXNzIjoiNThlZjc2YWI5MGJjIiwicm9sZXMiOlt7Im5hbWUiOiJjcDpjbGllbnQ6cmlkZXI6In1dLCJzdWIiOiI1OGVmNzZhYjkwYmMifQ.TBYDdzv1YJw9VKGfKSbu4tpFJ2BPfneCq4Pc1xK_rlY",
+  "TokenWithInvalidSignature": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaXNwbGF5X25hbWUiOiJBbGZyZWQgQmVybmFyZCIsImlhdCI6MTQ1MzIyNTQ3MywiaXNzIjoiNThlZjc2YWI5MGJjIiwicm9sZXMiOlt7Im5hbWUiOiJjcDpjbGllbnQ6cmlkZXI6In1dLCJzdWIiOiI1OGVmNzZhYjkwYmMifQ.MrLXZ__s2MwKuSk6IvxyxhoVVSn68s6YsCijP7tpRiwJbcom7eWKgOxquVK8UTJmqXuSUlX7xr4LmqFqbI5uoQGlPP_1KVIGJ1HLhAa90Imnli6l_p0NWjaAzAwEE3qpnHou8xRgATvjGy5ir9rvpbGYLnNJFvG28RyEAY7oUGJ5OKPIhNFDHZcEuPNO7VhoBeb6q5DQig4_o0Ck4u9iCw_4HJemBk312Sc4Z_0rFy_votKP_mOw_YtqS8R39J6ZpEcJcJ2GKX2qeJI3YSIRaezIeC_xG_9IUf0_1wHbQbBmb3q3hznatCOCDrQBiu3OJnyYnJel0EEkPEum0s70ZQ"
+}
