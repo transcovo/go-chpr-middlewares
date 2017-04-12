@@ -1,3 +1,12 @@
+/*
+Use to re-generate the fixtures file:
+$ go run scripts/generateFixtures.go | tee fixtures/fixtures.json
+
+The aim is to be able to maintain hard-coded fixtures of signed tokens, but by experience it is a pain to do
+because you have to find the private key, decode tokens, modify them, sign them again...
+This script helps generating a new set of fixtures, but the fixtures themselves have to be committed.
+*/
+
 package main
 
 import (
