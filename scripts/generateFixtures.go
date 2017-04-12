@@ -23,6 +23,7 @@ import (
 )
 
 type pseudoRole map[string]string
+type pseudoJSObject map[string]interface{}
 
 var validClaims = jwt.MapClaims{
 	"iss":          "58ef76ab90bc",
@@ -54,13 +55,13 @@ func main() {
 	fmt.Println(string(jsonFixtures))
 }
 
-func generateFixtures() map[string]interface{} {
+func generateFixtures() pseudoJSObject {
 	privateKey := generatePrivateKey()
 	otherPrivateKey := generatePrivateKey()
 	publicKeyPem, _ := generateKeyStrings(privateKey)
-	fixtures := map[string]interface{}{}
+	fixtures := pseudoJSObject{}
 	fixtures["RawRsaPublicKey"] = publicKeyPem
-	allClaims := map[string]interface{}{}
+	allClaims := pseudoJSObject{}
 	fixtures["Claims"] = allClaims
 	addTokenAndClaims(fixtures, allClaims, "TokenValidWithRiderRole", &validClaims, privateKey, true)
 	addTokenAndClaims(fixtures, allClaims, "TokenExpired", &expiredClaims, privateKey, true)
@@ -70,8 +71,8 @@ func generateFixtures() map[string]interface{} {
 }
 
 func addTokenAndClaims(
-	fixtures map[string]interface{},
-	allClaims map[string]interface{},
+	fixtures pseudoJSObject,
+	allClaims pseudoJSObject,
 	name string, claims *jwt.MapClaims,
 	privateKey *rsa.PrivateKey,
 	useRS256 bool,
