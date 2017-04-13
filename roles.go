@@ -26,13 +26,12 @@ func RoleAuthorizationMiddleware(patterns ...string) Middleware {
 }
 
 func extractRoles(req *http.Request) []Role {
-	roles := req.Context().Value(TokenClaimsContextKey)
-	switch roles := roles.(type) {
-	case []Role:
-		return roles
-	default:
+	untypedClaims := req.Context().Value(TokenClaimsContextKey)
+	claims, ok := untypedClaims.(*TokenClaims)
+	if !ok || claims == nil {
 		return nil
 	}
+	return claims.Roles
 }
 
 func matchesRoles(patterns []string, roles []Role) bool {

@@ -19,7 +19,8 @@ func TestRoleAuthorizationMiddleware_Success(t *testing.T) {
 
 	recorder := httptest.NewRecorder()
 	req := &http.Request{}
-	ctx := context.WithValue(req.Context(), TokenClaimsContextKey, []Role{{"cp:employee:tech:"}})
+	claims := &TokenClaims{Roles: []Role{{"cp:employee:tech:"}}}
+	ctx := context.WithValue(req.Context(), TokenClaimsContextKey, claims)
 	req = req.WithContext(ctx)
 	wrappedHandler(recorder, req)
 	res := recorder.Result()
@@ -37,6 +38,30 @@ func TestRoleAuthorizationMiddleware_Forbidden(t *testing.T) {
 	assert.Equal(t, 403, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, "Forbidden\n", string(body))
+}
+
+func TestRoleAuthorizationMiddleware_ChainedSuccess(t *testing.T) {
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey)
+	employeeMiddleware := RoleAuthorizationMiddleware("cp:client:rider:")
+	wrappedHandler := jwtMiddleware(employeeMiddleware(fixtures.Fake200Handler))
+
+	headers := http.Header{"Authorization": {"Bearer " + fixtures.Fixtures.TokenValidWithRiderRole}}
+	recorder := httptest.NewRecorder()
+	wrappedHandler(recorder, &http.Request{Header: headers})
+	res := recorder.Result()
+	assert.Equal(t, 200, res.StatusCode)
+}
+
+func TestRoleAuthorizationMiddleware_ChainedForbidden(t *testing.T) {
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey)
+	employeeMiddleware := RoleAuthorizationMiddleware("cp:employee:")
+	wrappedHandler := jwtMiddleware(employeeMiddleware(fixtures.Fake200Handler))
+
+	headers := http.Header{"Authorization": {"Bearer " + fixtures.Fixtures.TokenValidWithRiderRole}}
+	recorder := httptest.NewRecorder()
+	wrappedHandler(recorder, &http.Request{Header: headers})
+	res := recorder.Result()
+	assert.Equal(t, 403, res.StatusCode)
 }
 
 func TestMatchesRole_IsPrefix(t *testing.T) {
