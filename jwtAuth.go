@@ -88,7 +88,7 @@ var bearerRegex = regexp.MustCompile(`^Bearer\s(\S+)$`)
 
 /*
 JwtAuthenticationMiddleware returns a middleware that:
-- checks the Token from the Authorization header with a public key
+- checks the Token from the Authorization header with a public key (format "Bearer token")
 - replies a 401 Unauthorized if it could not find a valid token (missing, expired, bad signature)
 - parses the claims and add them to the request context if the token is valid
 Panics if fails to parse the public key
@@ -119,6 +119,10 @@ func parsePublicKey(publicKeyString string) *rsa.PublicKey {
 	return publicKey
 }
 
+/*
+Tries to extract a Token from the Authorization header, expecting the format "Bearer token"
+Returns an empty token if could not find a compliant token.
+*/
 func retrieveTokenFromHeader(req *http.Request) RawToken {
 	if req == nil {
 		return EmptyToken
