@@ -20,7 +20,7 @@ func TestRoleAuthorizationMiddleware_Success(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	req := &http.Request{}
 	claims := &TokenClaims{Roles: []Role{{"cp:employee:tech:"}}}
-	ctx := context.WithValue(req.Context(), TokenClaimsContextKey, claims)
+	ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
 	req = req.WithContext(ctx)
 	wrappedHandler(recorder, req)
 	res := recorder.Result()
@@ -80,7 +80,7 @@ func TestMatchesRole_NoMatch(t *testing.T) {
 
 func TestRespond403Forbidden(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	Respond403Forbidden(recorder)
+	respond403Forbidden(recorder)
 	res := recorder.Result()
 	assert.Equal(t, 403, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)

@@ -15,7 +15,7 @@ import (
 /*
 RawToken is an alias for string containing an authentication token
 */
-type RawToken string
+type rawToken string
 
 /*
 Role is the struct of roles in CP tokens
@@ -63,18 +63,18 @@ func (err ErrInvalidAlgorithm) Error() string {
 /*
 EmptyToken is a shortcut for better readability
 */
-const EmptyToken = RawToken("")
+const emptyToken = rawToken("")
 
 /*
 ContextKey created because Context cannot use plain strings
 https://medium.com/@matryer/context-keys-in-go-5312346a868d
 */
-type ContextKey string
+type contextKey string
 
 /*
 String method added as suggested in https://medium.com/@matryer/context-keys-in-go-5312346a868d
 */
-func (key ContextKey) String() string {
+func (key contextKey) String() string {
 	return fmt.Sprintf(`ContextKey("%s")`, string(key))
 }
 
@@ -82,7 +82,7 @@ func (key ContextKey) String() string {
 TokenClaimsContextKey is used to store the token claims in the request context
 (plain strings are not allowed as keys)
 */
-const TokenClaimsContextKey = ContextKey("TokenClaims")
+const tokenClaimsContextKey = contextKey("TokenClaims")
 
 var bearerRegex = regexp.MustCompile(`^Bearer\s(\S+)$`)
 
@@ -100,10 +100,10 @@ func JwtAuthenticationMiddleware(publicKeyString string) Middleware {
 			token := retrieveTokenFromHeader(req)
 			claims, err := validateTokenAndExtractClaims(token, publicKey)
 			if err != nil {
-				Respond401Unauthorized(res)
+				respond401Unauthorized(res)
 				return
 			}
-			ctx := context.WithValue(req.Context(), TokenClaimsContextKey, claims)
+			ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
 			req = req.WithContext(ctx)
 			next(res, req)
 		}
@@ -123,19 +123,19 @@ func parsePublicKey(publicKeyString string) *rsa.PublicKey {
 Tries to extract a Token from the Authorization header, expecting the format "Bearer token"
 Returns an empty token if could not find a compliant token.
 */
-func retrieveTokenFromHeader(req *http.Request) RawToken {
+func retrieveTokenFromHeader(req *http.Request) rawToken {
 	if req == nil {
-		return EmptyToken
+		return emptyToken
 	}
 	authHeader := req.Header.Get("Authorization")
 	afterBearer := bearerRegex.FindStringSubmatch(authHeader)
 	if len(afterBearer) < 2 {
-		return EmptyToken
+		return emptyToken
 	}
-	return RawToken(afterBearer[1])
+	return rawToken(afterBearer[1])
 }
 
-func validateTokenAndExtractClaims(rawToken RawToken, publicKey *rsa.PublicKey) (*TokenClaims, error) {
+func validateTokenAndExtractClaims(rawToken rawToken, publicKey *rsa.PublicKey) (*TokenClaims, error) {
 	if publicKey == nil {
 		return nil, ErrMissingPublicKey
 	}
@@ -165,6 +165,14 @@ func extractClaims(parsed *jwt.Token) (*TokenClaims, error) {
 /*
 Respond401Unauthorized handles the case when authentication fails
 */
-func Respond401Unauthorized(res http.ResponseWriter) {
+func respond401Unauthorized(res http.ResponseWriter) {
 	http.Error(res, "Unauthorized", http.StatusUnauthorized)
+}
+
+func GetClaims(request *http.Request) *TokenClaims {
+	claims := request.Context().Value(tokenClaimsContextKey)
+	if claims, ok := claims.(*TokenClaims); ok {
+		return claims
+	}
+	return nil
 }
