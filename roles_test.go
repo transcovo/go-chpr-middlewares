@@ -1,12 +1,11 @@
 package middleware
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"context"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/transcovo/go-chpr-middlewares/fixtures"

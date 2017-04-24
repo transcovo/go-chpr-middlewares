@@ -3,13 +3,13 @@ package middleware
 import (
 	"context"
 	"crypto/rsa"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
 
-	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/pkg/errors"
-	logger "github.com/transcovo/go-chpr-logger"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/transcovo/go-chpr-logger"
 )
 
 /*

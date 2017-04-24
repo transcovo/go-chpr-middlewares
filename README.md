@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/transcovo/go-chpr-middlewares/branch/master/graph/badge.svg)](https://codecov.io/gh/transcovo/go-chpr-middlewares)
 [![GoDoc](https://godoc.org/github.com/transcovo/go-chpr-middlewares?status.svg)](https://godoc.org/github.com/transcovo/go-chpr-middlewares)
 
------------------ 
+-----------------
 
 This library regroups HTTP middleware to be used in our golang servers.
 A middleware is a function taking a `http.HandlerFunc` and returning a `http.HandlerFunc`.
@@ -13,22 +13,22 @@ It implements the interface `http.Handler`.
 
 See the [godoc](https://godoc.org/github.com/transcovo/go-chpr-middlewares)
 
-## Requirements 
- 
-Minimum Go version: 1.7 
- 
-## Installation 
- 
-if using govendor 
+## Requirements
+
+Minimum Go version: 1.7
+
+## Installation
+
+if using govendor
 ```bash
 govendor fetch -u github.com/transcovo/go-chpr-middlewares
-``` 
- 
-standard way (not recommended) 
+```
+
+standard way (not recommended)
 ```bash
 go get -u github.com/transcovo/go-chpr-middlewares
-``` 
- 
+```
+
 ## Available middleware
 
 ```golang
@@ -69,7 +69,7 @@ wrappedHandler := authMiddleware(adminOnlyMiddleware(MyHandler))
 ```
 
 ## Misc
- 
+
 The policy for this lib regarding vendoring is not to include any dependency, unlike server code.
 The main reason for this is to avoid any conflict between your project and go-chpr-middlewares.
 For more explanations: https://peter.bourgon.org/go-best-practices-2016/#dependency-management
