@@ -15,10 +15,10 @@ func myHandler(res http.ResponseWriter, req *http.Request) {
 
 func ExampleChainMiddlewares() {
 	handler := ChainMiddlewares([]Middleware{
-		ParamsMiddleware(requestParamsGetter),
-		RoleAuthorizationMiddleware("cp:client:rider:", "cp:employee:tech:"),
-		JwtAuthenticationMiddleware("some public key string"),
 		RecoveryMiddleware(),
+		JwtAuthenticationMiddleware("some public key string"),
+		RoleAuthorizationMiddleware("cp:client:rider:", "cp:employee:tech:"),
+		ParamsMiddleware(requestParamsGetter),
 	}, myHandler)
 
 	registerHandler("/some/route", handler)

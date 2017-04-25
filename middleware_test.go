@@ -35,7 +35,7 @@ func TestChainMiddlewares(t *testing.T) {
 	res := recorder.Result()
 	assert.Equal(t, 200, res.StatusCode)
 
-	for _, expected := range []int{3, 2, 1} {
+	for _, expected := range []int{1, 2, 3} {
 		received := <-testMiddlewarePosition
 		assert.Equal(t, expected, received)
 	}

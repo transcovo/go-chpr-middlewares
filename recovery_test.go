@@ -10,7 +10,7 @@ import (
 	"github.com/transcovo/go-chpr-middlewares/fixtures"
 )
 
-func recoveryTestHandler(res http.ResponseWriter, req *http.Request) {
+func panicTestHandler(res http.ResponseWriter, req *http.Request) {
 	panic(errors.New("some error"))
 }
 
@@ -30,7 +30,7 @@ func TestRecoveryMiddleware_NoPanic(t *testing.T) {
 func TestRecoveryMiddleware_Panic(t *testing.T) {
 	recoveryMiddleware := RecoveryMiddleware()
 	assert.NotNil(t, recoveryMiddleware)
-	wrappedHandler := recoveryMiddleware(recoveryTestHandler)
+	wrappedHandler := recoveryMiddleware(panicTestHandler)
 
 	recorder := httptest.NewRecorder()
 	req := &http.Request{}

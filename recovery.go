@@ -15,8 +15,8 @@ func RecoveryMiddleware() Middleware {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
 			defer func() {
-				if r := recover(); r != nil {
-					logger.WithField("r", r).Error("[Recovery Middleware] Recovered panic from handler")
+				if err := recover(); err != nil {
+					logger.WithField("err", err).Error("[Recovery Middleware] Recovered panic from handler")
 
 					res.WriteHeader(http.StatusInternalServerError)
 				}
