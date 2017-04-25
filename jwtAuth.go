@@ -135,11 +135,11 @@ func retrieveTokenFromHeader(req *http.Request) rawToken {
 	return rawToken(afterBearer[1])
 }
 
-func validateTokenAndExtractClaims(rawToken rawToken, publicKey *rsa.PublicKey) (*TokenClaims, error) {
+func validateTokenAndExtractClaims(token rawToken, publicKey *rsa.PublicKey) (*TokenClaims, error) {
 	if publicKey == nil {
 		return nil, ErrMissingPublicKey
 	}
-	parsed, err := jwt.ParseWithClaims(string(rawToken), &TokenClaims{}, func(parsed *jwt.Token) (interface{}, error) {
+	parsed, err := jwt.ParseWithClaims(string(token), &TokenClaims{}, func(parsed *jwt.Token) (interface{}, error) {
 		if _, ok := parsed.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, &ErrInvalidAlgorithm{parsed.Header["alg"]}
 		}
@@ -169,6 +169,7 @@ func respond401Unauthorized(res http.ResponseWriter) {
 	http.Error(res, "Unauthorized", http.StatusUnauthorized)
 }
 
+// GetClaims return the claims stored in the context of the request by the JwtAuthenticationMiddleware middlewate
 func GetClaims(request *http.Request) *TokenClaims {
 	claims := request.Context().Value(tokenClaimsContextKey)
 	if claims, ok := claims.(*TokenClaims); ok {

@@ -157,7 +157,7 @@ func TestContextKey_String(t *testing.T) {
 	assert.Equal(t, `ContextKey("TokenClaims")`, keyString)
 }
 
-func TestGetClaims(t *testing.T) {
+func TestGetClaims_Sucess(t *testing.T) {
 	req := &http.Request{}
 	claims := &TokenClaims{Roles: []Role{{"cp:employee:tech:"}}, DisplayName: "ltbesh"}
 	ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
@@ -168,7 +168,7 @@ func TestGetClaims(t *testing.T) {
 
 func TestGetClaims_EmptyContext(t *testing.T) {
 	req := &http.Request{}
-	ctx := context.TODO()
+	ctx := context.Background()
 	req = req.WithContext(ctx)
 	extractedClaims := GetClaims(req)
 	if extractedClaims != nil {
