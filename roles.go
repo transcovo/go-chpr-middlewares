@@ -17,7 +17,7 @@ func RoleAuthorizationMiddleware(patterns ...string) Middleware {
 		return func(res http.ResponseWriter, req *http.Request) {
 			roles := extractRoles(req)
 			if !matchesRoles(patterns, roles) {
-				Respond403Forbidden(res)
+				respond403Forbidden(res)
 				return
 			}
 			next(res, req)
@@ -26,9 +26,8 @@ func RoleAuthorizationMiddleware(patterns ...string) Middleware {
 }
 
 func extractRoles(req *http.Request) []Role {
-	untypedClaims := req.Context().Value(TokenClaimsContextKey)
-	claims, ok := untypedClaims.(*TokenClaims)
-	if !ok || claims == nil {
+	claims := GetClaims(req)
+	if claims == nil {
 		return nil
 	}
 	return claims.Roles
@@ -51,6 +50,6 @@ func matchesRoles(patterns []string, roles []Role) bool {
 /*
 Respond403Forbidden handles the case when authorization fails
 */
-func Respond403Forbidden(res http.ResponseWriter) {
+func respond403Forbidden(res http.ResponseWriter) {
 	http.Error(res, "Forbidden", http.StatusForbidden)
 }
