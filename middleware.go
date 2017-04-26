@@ -11,6 +11,9 @@ type Middleware func(http.HandlerFunc) http.HandlerFunc
 
 /*
 ChainMiddlewares chains the middlewares applied to the given http.HandlerFunc.
+
+Middlewares are applied in the reverse order, which means that the first one in the list will be the
+first executed when handling a request.
 */
 func ChainMiddlewares(middlewares []Middleware, handler http.HandlerFunc) http.HandlerFunc {
 	middlewaresCount := len(middlewares)

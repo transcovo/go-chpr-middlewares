@@ -11,9 +11,9 @@ ParamsGetter is the function type used to get the request parameters in the requ
 type ParamsGetter func(*http.Request) map[string]string
 
 /*
-ParamsContextKey is used to store the request params in the request context (plain strings are not allowed as keys)
+paramsContextKey is used to store the request params in the request context (plain strings are not allowed as keys)
 */
-const ParamsContextKey = ContextKey("params")
+const paramsContextKey = contextKey("params")
 
 /*
 ParamsMiddleware sets the request parameters in the request context.
@@ -25,10 +25,23 @@ func ParamsMiddleware(paramsGetter ParamsGetter) Middleware {
 		return func(res http.ResponseWriter, req *http.Request) {
 			params := paramsGetter(req)
 
-			ctx := context.WithValue(req.Context(), ParamsContextKey, params)
+			ctx := context.WithValue(req.Context(), paramsContextKey, params)
 			req = req.WithContext(ctx)
 
 			next(res, req)
 		}
 	}
+}
+
+/*
+GetParamsFromRequest returns the params set in the request context in the ParamsMiddleware.
+
+This is to be called in the controllers.
+*/
+func GetParamsFromRequest(req *http.Request) map[string]string {
+	params := req.Context().Value(paramsContextKey)
+	if params != nil {
+		return params.(map[string]string)
+	}
+	return map[string]string{}
 }

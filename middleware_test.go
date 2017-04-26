@@ -9,19 +9,19 @@ import (
 	"github.com/transcovo/go-chpr-middlewares/fixtures"
 )
 
-var testMiddlewarePosition chan int
+var testMiddlewarePositionResult []int
 
 func testMiddleware(position int) Middleware {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
-			testMiddlewarePosition <- position
+			testMiddlewarePositionResult = append(testMiddlewarePositionResult, position)
 			next(res, req)
 		}
 	}
 }
 
 func TestChainMiddlewares(t *testing.T) {
-	testMiddlewarePosition = make(chan int, 3)
+	testMiddlewarePositionResult = make([]int, 0)
 	recorder := httptest.NewRecorder()
 	req := &http.Request{}
 
@@ -35,8 +35,5 @@ func TestChainMiddlewares(t *testing.T) {
 	res := recorder.Result()
 	assert.Equal(t, 200, res.StatusCode)
 
-	for _, expected := range []int{1, 2, 3} {
-		received := <-testMiddlewarePosition
-		assert.Equal(t, expected, received)
-	}
+	assert.Equal(t, []int{1, 2, 3}, testMiddlewarePositionResult)
 }

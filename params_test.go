@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,15 +13,15 @@ func paramsGetter(req *http.Request) map[string]string {
 	return map[string]string{"field": "value"}
 }
 
-var contextParamsChan chan map[string]string
+var contextParamsResult map[string]string
 
 func paramsTestHandler(res http.ResponseWriter, req *http.Request) {
-	contextParamsChan <- req.Context().Value(ParamsContextKey).(map[string]string)
+	contextParamsResult = req.Context().Value(paramsContextKey).(map[string]string)
 	res.WriteHeader(http.StatusOK)
 }
 
 func TestParamsMiddleware(t *testing.T) {
-	contextParamsChan = make(chan map[string]string, 1)
+	contextParamsResult = make(map[string]string)
 	paramsMiddleware := ParamsMiddleware(paramsGetter)
 	assert.NotNil(t, paramsMiddleware)
 	wrappedHandler := paramsMiddleware(paramsTestHandler)
@@ -32,6 +33,23 @@ func TestParamsMiddleware(t *testing.T) {
 	res := recorder.Result()
 	assert.Equal(t, 200, res.StatusCode)
 
-	paramsContext := <-contextParamsChan
-	assert.Equal(t, map[string]string{"field": "value"}, paramsContext)
+	assert.Equal(t, map[string]string{"field": "value"}, contextParamsResult)
+}
+
+func TestGetParamsFromRequest_WithParams(t *testing.T) {
+	params := map[string]string{"field": "value"}
+
+	req := &http.Request{}
+	ctx := context.WithValue(req.Context(), paramsContextKey, params)
+	req = req.WithContext(ctx)
+
+	resParams := GetParamsFromRequest(req)
+	assert.Equal(t, params, resParams)
+}
+
+func TestGetParamsFromRequest_WithoutParams(t *testing.T) {
+	req := &http.Request{}
+
+	resParams := GetParamsFromRequest(req)
+	assert.Equal(t, map[string]string{}, resParams)
 }
