@@ -52,6 +52,6 @@ func GetRsaPublicKey() *rsa.PublicKey {
 /*
 Fake200Handler is a dead-simple http.HandlerFunc returning a 200 OK
 */
-func Fake200Handler(res http.ResponseWriter, req *http.Request) {
+func Fake200Handler(res http.ResponseWriter, _ *http.Request) {
 	res.WriteHeader(http.StatusOK)
 }
