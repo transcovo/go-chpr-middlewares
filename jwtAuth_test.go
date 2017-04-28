@@ -7,13 +7,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/transcovo/go-chpr-middlewares/fixtures"
 )
 
 func TestMiddleware_Unauthorized(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey)
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 	recorder := httptest.NewRecorder()
 	wrappedHandler(recorder, &http.Request{})
@@ -24,7 +25,7 @@ func TestMiddleware_Unauthorized(t *testing.T) {
 }
 
 func TestMiddleware_ValidToken(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey)
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
 	recorder := httptest.NewRecorder()
@@ -35,7 +36,7 @@ func TestMiddleware_ValidToken(t *testing.T) {
 }
 
 func TestMiddleWare_StoreInformationInRequestcontext(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey)
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
 	modifiedRequest := &http.Request{}
 	fakeHandler := func(res http.ResponseWriter, req *http.Request) {
 		modifiedRequest = req
@@ -53,13 +54,13 @@ func TestMiddleWare_StoreInformationInRequestcontext(t *testing.T) {
 }
 
 func TestParsePublicKey_ValidKey(t *testing.T) {
-	parsed := parsePublicKey(fixtures.Fixtures.RawRsaPublicKey)
+	parsed := parsePublicKey(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
 	assert.Equal(t, fixtures.GetRsaPublicKey(), parsed)
 }
 
 func TestParsePublicKey_InvalidKey(t *testing.T) {
 	parseInvalidKey := func() {
-		parsePublicKey("not a key !")
+		parsePublicKey("not a key !", &logrus.Logger{})
 	}
 	assert.Panics(t, parseInvalidKey)
 }

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/transcovo/go-chpr-middlewares/fixtures"
 )
@@ -40,7 +41,7 @@ func TestRoleAuthorizationMiddleware_Forbidden(t *testing.T) {
 }
 
 func TestRoleAuthorizationMiddleware_ChainedSuccess(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey)
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
 	employeeMiddleware := RoleAuthorizationMiddleware("cp:client:rider:")
 	wrappedHandler := jwtMiddleware(employeeMiddleware(fixtures.Fake200Handler))
 
@@ -52,7 +53,7 @@ func TestRoleAuthorizationMiddleware_ChainedSuccess(t *testing.T) {
 }
 
 func TestRoleAuthorizationMiddleware_ChainedForbidden(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey)
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
 	employeeMiddleware := RoleAuthorizationMiddleware("cp:employee:")
 	wrappedHandler := jwtMiddleware(employeeMiddleware(fixtures.Fake200Handler))
 

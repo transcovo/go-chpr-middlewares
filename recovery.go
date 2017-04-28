@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/transcovo/go-chpr-logger"
+	"github.com/Sirupsen/logrus"
 )
 
 /*
@@ -11,7 +11,7 @@ RecoveryMiddleware catches the panics that happen during a request execution.
 
 On panic, it sends a 500 to the client.
 */
-func RecoveryMiddleware() Middleware {
+func RecoveryMiddleware(logger *logrus.Logger) Middleware {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
 			defer func() {

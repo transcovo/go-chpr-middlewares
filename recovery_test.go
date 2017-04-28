@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/transcovo/go-chpr-middlewares/fixtures"
 )
@@ -15,7 +16,7 @@ func panicTestHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func TestRecoveryMiddleware_NoPanic(t *testing.T) {
-	recoveryMiddleware := RecoveryMiddleware()
+	recoveryMiddleware := RecoveryMiddleware(&logrus.Logger{})
 	assert.NotNil(t, recoveryMiddleware)
 	wrappedHandler := recoveryMiddleware(fixtures.Fake200Handler)
 
@@ -28,7 +29,7 @@ func TestRecoveryMiddleware_NoPanic(t *testing.T) {
 }
 
 func TestRecoveryMiddleware_Panic(t *testing.T) {
-	recoveryMiddleware := RecoveryMiddleware()
+	recoveryMiddleware := RecoveryMiddleware(&logrus.Logger{})
 	assert.NotNil(t, recoveryMiddleware)
 	wrappedHandler := recoveryMiddleware(panicTestHandler)
 

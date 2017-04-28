@@ -1,6 +1,10 @@
 package middleware
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/Sirupsen/logrus"
+)
 
 func registerHandler(string, http.HandlerFunc) {
 }
@@ -14,9 +18,11 @@ func myHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func ExampleChainMiddlewares() {
+	logger := &logrus.Logger{}
+
 	handler := ChainMiddlewares([]Middleware{
-		RecoveryMiddleware(),
-		JwtAuthenticationMiddleware("some public key string"),
+		RecoveryMiddleware(logger),
+		JwtAuthenticationMiddleware("some public key string", logger),
 		RoleAuthorizationMiddleware("cp:client:rider:", "cp:employee:tech:"),
 		ParamsMiddleware(requestParamsGetter),
 	}, myHandler)

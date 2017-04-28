@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/transcovo/go-chpr-logger"
 )
 
 /*
@@ -93,8 +93,8 @@ JwtAuthenticationMiddleware returns a middleware that:
 - parses the claims and add them to the request context if the token is valid
 Panics if fails to parse the public key
 */
-func JwtAuthenticationMiddleware(publicKeyString string) Middleware {
-	publicKey := parsePublicKey(publicKeyString)
+func JwtAuthenticationMiddleware(publicKeyString string, logger *logrus.Logger) Middleware {
+	publicKey := parsePublicKey(publicKeyString, logger)
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
 			token := retrieveTokenFromHeader(req)
@@ -110,7 +110,7 @@ func JwtAuthenticationMiddleware(publicKeyString string) Middleware {
 	}
 }
 
-func parsePublicKey(publicKeyString string) *rsa.PublicKey {
+func parsePublicKey(publicKeyString string, logger *logrus.Logger) *rsa.PublicKey {
 	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(publicKeyString))
 	if err != nil {
 		logger.WithField("err", err).Error("[JwtAuthenticationMiddleware] Failed to parse public key")
