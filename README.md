@@ -82,6 +82,7 @@ Based on [the jwt go lib](https://github.com/dgrijalva/jwt-go).
 from the token claims.
 
 ```golang
+logger := getMyLogger()
 authMiddleware := middleware.JwtAuthenticationMiddleware(publicKeyString, logger)
 adminOnlyMiddleware := middleware.RoleAuthorizationMiddleware("cp:employee:", "cp:machine:")
 
