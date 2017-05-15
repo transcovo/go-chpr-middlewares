@@ -48,8 +48,8 @@ func main() {
   // `JwtAuthenticationMiddleware`, `RoleAuthorizationMiddleware` and `ParamsMiddleware`, and then
   // the handler will be called.
   handler := middleware.ChainMiddlewares([]middleware.Middleware{
-    middleware.RecoveryMiddleware(),
-    middleware.JwtAuthenticationMiddleware("some public key string"),
+    middleware.RecoveryMiddleware(someLogger),
+    middleware.JwtAuthenticationMiddleware("some public key string", someLogger),
     middleware.RoleAuthorizationMiddleware("cp:client:rider:", "cp:employee:tech:"),
     middleware.ParamsMiddleware(requestParamsGetter),
   }, myHandler)
@@ -63,8 +63,9 @@ func main() {
 #### JwtAuthenticationMiddleware
 
 ```golang
+logger := getMyLogger()
 publicKeyString := getMyPublicKeyFromConfig()
-authMiddleware := middleware.JwtAuthenticationMiddleware(publicKeyString)
+authMiddleware := middleware.JwtAuthenticationMiddleware(publicKeyString, logger)
 
 func MyHandler(http.ResponseWriter, *http.Request) {
   /* does something */
@@ -81,7 +82,8 @@ Based on [the jwt go lib](https://github.com/dgrijalva/jwt-go).
 from the token claims.
 
 ```golang
-authMiddleware := middleware.JwtAuthenticationMiddleware(publicKeyString)
+logger := getMyLogger()
+authMiddleware := middleware.JwtAuthenticationMiddleware(publicKeyString, logger)
 adminOnlyMiddleware := middleware.RoleAuthorizationMiddleware("cp:employee:", "cp:machine:")
 
 func MyHandler(http.ResponseWriter, *http.Request) {
@@ -117,7 +119,8 @@ Middleware used to catch panics that can happen during the request handling.
 On panic, this middleware will catch it and reply a 500 to the client.
 
 ```golang
-recoveryMiddleware := middleware.RecoveryMiddleware(mux.Vars)
+logger := getMyLogger()
+recoveryMiddleware := middleware.RecoveryMiddleware(logger)
 
 func MyHandler(http.ResponseWriter, *http.Request) {
   /* does something */
