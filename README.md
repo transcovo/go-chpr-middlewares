@@ -19,12 +19,16 @@ Minimum Go version: 1.7
 
 ## Installation
 
-if using govendor
+- if using govendor
 ```bash
-govendor fetch -u github.com/transcovo/go-chpr-middlewares
+govendor fetch github.com/transcovo/go-chpr-middlewares
+```
+and:
+```bash
+govendor fetch github.com/dgrijalva/jwt-go
 ```
 
-standard way (not recommended)
+- standard way (not recommended)
 ```bash
 go get -u github.com/transcovo/go-chpr-middlewares
 ```
