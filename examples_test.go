@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 func registerHandler(string, http.HandlerFunc) {
