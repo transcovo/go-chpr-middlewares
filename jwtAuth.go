@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/sirupsen/logrus"
+	"os"
+
 	"github.com/dgrijalva/jwt-go"
+	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -94,6 +96,15 @@ JwtAuthenticationMiddleware returns a middleware that:
 Panics if fails to parse the public key
 */
 func JwtAuthenticationMiddleware(publicKeyString string, logger *logrus.Logger) Middleware {
+	/*
+		If the IGNORE_AUTH environment variable is set to "true"
+		the middleware will bypass the authentication process
+		/!\ This variable should be set to true only for development purpose /!\
+	*/
+	if os.Getenv("IGNORE_AUTH") == "true" {
+		return ignoreAuthentication(logger)
+	}
+
 	publicKey := parsePublicKey(publicKeyString, logger)
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
@@ -105,6 +116,15 @@ func JwtAuthenticationMiddleware(publicKeyString string, logger *logrus.Logger) 
 			}
 			ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
 			req = req.WithContext(ctx)
+			next(res, req)
+		}
+	}
+}
+
+func ignoreAuthentication(logger *logrus.Logger) Middleware {
+	logger.Info("[JwtAuthenticationMiddleware] Authentication is ignored (IGNORE_AUTH sets to true)")
+	return func(next http.HandlerFunc) http.HandlerFunc {
+		return func(res http.ResponseWriter, req *http.Request) {
 			next(res, req)
 		}
 	}

@@ -5,10 +5,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/transcovo/go-chpr-middlewares/fixtures"
 )
@@ -51,6 +52,19 @@ func TestMiddleWare_StoreInformationInRequestcontext(t *testing.T) {
 	storedClaims := modifiedRequest.Context().Value(tokenClaimsContextKey).(*TokenClaims)
 	assert.Equal(t, []Role{{Name: "cp:client:rider:"}}, storedClaims.Roles)
 	assert.Equal(t, "Alfred Bernard", storedClaims.DisplayName)
+}
+
+func TestMiddleware_IgnoredAuthForDevelopmentMode(t *testing.T) {
+	os.Setenv("IGNORE_AUTH", "true")
+	defer os.Setenv("IGNORE_AUTH", "")
+	jwtMiddleware := JwtAuthenticationMiddleware("", &logrus.Logger{})
+	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
+	recorder := httptest.NewRecorder()
+	wrappedHandler(recorder, &http.Request{})
+	res := recorder.Result()
+	assert.Equal(t, 200, res.StatusCode)
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Equal(t, "", string(body))
 }
 
 func TestParsePublicKey_ValidKey(t *testing.T) {
