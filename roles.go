@@ -13,6 +13,15 @@ role matching a pattern from a list of patterns.
 To be plugged after JwtAuthenticationMiddleware.
 */
 func RoleAuthorizationMiddleware(patterns ...string) Middleware {
+	/*
+		If the IGNORE_AUTH environment variable is set to "true"
+		the middleware will bypass the authentication and authorization process
+		/!\ This variable should be set to true only for development purpose /!\
+	*/
+	if IsAuthIgnored() {
+		return NoopMiddleware
+	}
+
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
 			roles := extractRoles(req)

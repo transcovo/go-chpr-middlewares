@@ -54,15 +54,19 @@ func TestMiddleWare_StoreInformationInRequestcontext(t *testing.T) {
 	assert.Equal(t, "Alfred Bernard", storedClaims.DisplayName)
 }
 
-func TestMiddleware_IgnoredAuthForDevelopmentMode(t *testing.T) {
+func TestMiddleware_IgnoredAuthenticationForDevelopmentMode(t *testing.T) {
 	os.Setenv("IGNORE_AUTH", "true")
 	defer os.Setenv("IGNORE_AUTH", "")
+
+	// no public key is required in this case
 	jwtMiddleware := JwtAuthenticationMiddleware("", &logrus.Logger{})
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 	recorder := httptest.NewRecorder()
 	wrappedHandler(recorder, &http.Request{})
+
 	res := recorder.Result()
 	assert.Equal(t, 200, res.StatusCode)
+
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, "", string(body))
 }

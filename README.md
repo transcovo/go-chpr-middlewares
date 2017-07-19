@@ -141,7 +141,7 @@ For more explanations: https://peter.bourgon.org/go-best-practices-2016/#depende
 
 ## Configuration
 
-For development purpose, set the following environment variable to bypass the authentication process:
+For development purpose, set the following environment variable to bypass the authentication and authorization process:
 
 ```export IGNORE_AUTH=true```
 
