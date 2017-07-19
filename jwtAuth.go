@@ -94,11 +94,6 @@ JwtAuthenticationMiddleware returns a middleware that:
 Panics if fails to parse the public key
 */
 func JwtAuthenticationMiddleware(publicKeyString string, logger *logrus.Logger) Middleware {
-	/*
-		If the IGNORE_AUTH environment variable is set to "true"
-		the middleware will bypass the authentication and authorization process
-		/!\ This variable should be set to true only for development purpose /!\
-	*/
 	if IsAuthIgnored() {
 		logger.Warn("[JwtAuthenticationMiddleware] Authentication is ignored (IGNORE_AUTH sets to true)")
 		return NoopMiddleware
