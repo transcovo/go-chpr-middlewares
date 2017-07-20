@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -85,4 +86,20 @@ func TestRespond403Forbidden(t *testing.T) {
 	assert.Equal(t, 403, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, "Forbidden\n", string(body))
+}
+
+func TestMiddleware_IgnoredAuthorizationForDevelopmentMode(t *testing.T) {
+	os.Setenv("IGNORE_AUTH", "true")
+	defer os.Setenv("IGNORE_AUTH", "")
+
+	roleMiddleware := RoleAuthorizationMiddleware("")
+	wrappedHandler := roleMiddleware(fixtures.Fake200Handler)
+	recorder := httptest.NewRecorder()
+	wrappedHandler(recorder, &http.Request{})
+
+	res := recorder.Result()
+	assert.Equal(t, 200, res.StatusCode)
+
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Equal(t, "", string(body))
 }

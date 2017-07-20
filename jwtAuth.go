@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/sirupsen/logrus"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -94,6 +94,11 @@ JwtAuthenticationMiddleware returns a middleware that:
 Panics if fails to parse the public key
 */
 func JwtAuthenticationMiddleware(publicKeyString string, logger *logrus.Logger) Middleware {
+	if IsAuthIgnored() {
+		logger.Warn("[JwtAuthenticationMiddleware] Authentication is ignored (IGNORE_AUTH sets to true)")
+		return NoopMiddleware
+	}
+
 	publicKey := parsePublicKey(publicKeyString, logger)
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {

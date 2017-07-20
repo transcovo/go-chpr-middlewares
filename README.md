@@ -139,6 +139,13 @@ The policy for this lib regarding vendoring is not to include any dependency, un
 The main reason for this is to avoid any conflict between your project and go-chpr-middlewares.
 For more explanations: https://peter.bourgon.org/go-best-practices-2016/#dependency-management
 
+## Configuration
+
+Set the following environment variable to bypass the authentication and authorization process.
+⚠ This variable should be set to true only for development purpose ⚠
+
+```export IGNORE_AUTH=true```
+
 ## Contribute and local installation
 
 Dependencies for developing on this project will be automatically installed when running tests:
