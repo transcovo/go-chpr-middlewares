@@ -25,12 +25,22 @@ import (
 type pseudoRole map[string]string
 type pseudoJSObject map[string]interface{}
 
-var validClaims = jwt.MapClaims{
+var riderClaims = jwt.MapClaims{
 	"iss":          "58ef76ab90bc",
 	"sub":          "58ef76ab90bc",
 	"display_name": "Alfred Bernard",
 	"roles": []pseudoRole{{
 		"name": "cp:client:rider:",
+	}},
+	"iat": 1453225473,
+}
+
+var employeeClaims = jwt.MapClaims{
+	"iss":          "58ef76ab90bc",
+	"sub":          "58ef76ab90bc",
+	"display_name": "Hubert Bonisseur de La Bath",
+	"roles": []pseudoRole{{
+		"name": "cp:employee:",
 	}},
 	"iat": 1453225473,
 }
@@ -63,10 +73,11 @@ func generateFixtures() pseudoJSObject {
 	fixtures["RawRsaPublicKey"] = publicKeyPem
 	allClaims := pseudoJSObject{}
 	fixtures["Claims"] = allClaims
-	addTokenAndClaims(fixtures, allClaims, "TokenValidWithRiderRole", &validClaims, privateKey, true)
+	addTokenAndClaims(fixtures, allClaims, "TokenValidWithRiderRole", &riderClaims, privateKey, true)
+	addTokenAndClaims(fixtures, allClaims, "TokenValidWithEmployeeRole", &employeeClaims, privateKey, true)
 	addTokenAndClaims(fixtures, allClaims, "TokenExpired", &expiredClaims, privateKey, true)
-	addTokenAndClaims(fixtures, allClaims, "TokenWithInvalidAlgorithm", &validClaims, privateKey, false)
-	addTokenAndClaims(fixtures, allClaims, "TokenWithInvalidSignature", &validClaims, otherPrivateKey, true)
+	addTokenAndClaims(fixtures, allClaims, "TokenWithInvalidAlgorithm", &riderClaims, privateKey, false)
+	addTokenAndClaims(fixtures, allClaims, "TokenWithInvalidSignature", &riderClaims, otherPrivateKey, true)
 	return fixtures
 }
 
