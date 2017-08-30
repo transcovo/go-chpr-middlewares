@@ -26,8 +26,8 @@ type pseudoRole map[string]string
 type pseudoJSObject map[string]interface{}
 
 var riderClaims = jwt.MapClaims{
-	"iss":          "58ef76ab90bc",
-	"sub":          "58ef76ab90bc",
+	"iss":          "58ef76ab90bc123412341234",
+	"sub":          "58ef76ab90bc123412341234",
 	"display_name": "Alfred Bernard",
 	"roles": []pseudoRole{{
 		"name": "cp:client:rider:",
@@ -36,8 +36,8 @@ var riderClaims = jwt.MapClaims{
 }
 
 var employeeClaims = jwt.MapClaims{
-	"iss":          "58ef76ab90bc",
-	"sub":          "58ef76ab90bc",
+	"iss":          "58ef76ab90bc123412341234",
+	"sub":          "58ef76ab90bc123412341234",
 	"display_name": "Hubert Bonisseur de La Bath",
 	"roles": []pseudoRole{{
 		"name": "cp:employee:",
@@ -46,8 +46,8 @@ var employeeClaims = jwt.MapClaims{
 }
 
 var expiredClaims = jwt.MapClaims{
-	"iss":          "ab90bc58ef76",
-	"sub":          "ab90bc58ef76",
+	"iss":          "ab90bc58ef76123412341234",
+	"sub":          "ab90bc58ef76123412341234",
 	"display_name": "Carl De la Batte",
 	"roles": []pseudoRole{{
 		"name": "cp:client:rider:",
