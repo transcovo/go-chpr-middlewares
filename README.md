@@ -68,8 +68,8 @@ func main() {
 
 ```golang
 logger := getMyLogger()
-publicKeyString := getMyPublicKeyFromConfig()
-authMiddleware := middleware.JwtAuthenticationMiddleware(publicKeyString, logger)
+publicKeysListAsString := getMyPublicKeysFromConfig()
+authMiddleware := middleware.JwtAuthenticationMiddleware(publicKeysListAsString, logger)
 
 func MyHandler(http.ResponseWriter, *http.Request) {
   /* does something */
@@ -79,6 +79,8 @@ wrappedHandler := authMiddleware(MyHandler)
 ```
 
 Based on [the jwt go lib](https://github.com/dgrijalva/jwt-go).
+
+> **NB**: You can provide a **list of public keys**, the middleware will handle it, and loop through the keys to try and validate a token. The **config variable should be a string with all the public keys, separated by a ";"** (cf the `RawRsaPublicListKeys` in `fixtures.json` for an example). Of course, the middleware will still handle single public keys to allow descending and ascending compatibility.
 
 #### RoleAuthorizationMiddleware
 
