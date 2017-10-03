@@ -102,12 +102,10 @@ func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.L
 		return NoopMiddleware
 	}
 
+	publicKeys := parsePublicKeysList(publicKeysListAsString, logger)
 	return func(next http.HandlerFunc) http.HandlerFunc {
-		publicKeys := parsePublicKeysList(publicKeysListAsString, logger)
-
 		return func(res http.ResponseWriter, req *http.Request) {
 			token := retrieveTokenFromHeader(req)
-			tokenValid := false
 			for _, publicKey := range publicKeys {
 				claims, err := validateTokenAndExtractClaims(token, publicKey)
 				if err != nil {
@@ -117,14 +115,10 @@ func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.L
 				ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
 				req = req.WithContext(ctx)
 				// Once decoded with one key, no need to continue trying with other keys
-				tokenValid = true
-				break
-			}
-			if tokenValid {
 				next(res, req)
-			} else {
-				respond401Unauthorized(res)
+				return
 			}
+			respond401Unauthorized(res)
 		}
 	}
 }
@@ -136,7 +130,10 @@ func parsePublicKeysList(publicKeysListAsString string, logger *logrus.Logger) [
 	for i, publicKeyString := range publicKeys {
 		publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(publicKeyString))
 		if err != nil {
-			logger.WithField("err", err).Error("[JwtAuthenticationMiddleware] Failed to parse public key")
+			logger.WithFields(logrus.Fields{
+				"err":   err,
+				"index": i,
+			}).Error("[JwtAuthenticationMiddleware] Failed to parse public key")
 			panic(err)
 		}
 		parsedPublicKeys[i] = publicKey

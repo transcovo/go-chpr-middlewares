@@ -95,18 +95,19 @@ func TestMiddleware_IgnoredAuthenticationForDevelopmentMode(t *testing.T) {
 	assert.Equal(t, "", string(body))
 }
 
-func TestParsePublicKey_ValidKey(t *testing.T) {
+func TestParsePublicKeysList_ValidKey(t *testing.T) {
 	parsed := parsePublicKeysList(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
 	assert.Len(t, parsed, 1)
 	assert.Equal(t, fixtures.GetRsaPublicKey(), parsed[0])
 }
 
-func TestParsePublicKey_ValidListKeys(t *testing.T) {
+func TestParsePublicKeysList_ValidListKeys(t *testing.T) {
 	parsed := parsePublicKeysList(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{})
+	assert.Len(t, parsed, 3)
 	assert.Equal(t, fixtures.GetRsaPublicKeysList(), parsed)
 }
 
-func TestParsePublicKey_InvalidKey(t *testing.T) {
+func TestParsePublicKeysList_InvalidKey(t *testing.T) {
 	parseInvalidKey := func() {
 		parsePublicKeysList("not a key !", &logrus.Logger{})
 	}

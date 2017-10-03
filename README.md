@@ -80,7 +80,7 @@ wrappedHandler := authMiddleware(MyHandler)
 
 Based on [the jwt go lib](https://github.com/dgrijalva/jwt-go).
 
-> **NB**: You can provide a **list of public keys**, the middleware will handle it, and loop through the keys to try and validate a token. The **config variable should be a string with all the public keys, separated by a ";"** (cf the `RawRsaPublicListKeys` in `fixtures.json` for an example). Of course, the middleware will still handle single public keys to allow descending and ascending compatibility.
+> **NB**: You can provide a **list of public keys** (one to n keys), the middleware will handle it, and loop through the keys to try and validate a token. The **config variable should be a string with all the public keys, separated by a ";\n"** (cf the `RawRsaPublicListKeys` in `fixtures.json` for an example).
 
 #### RoleAuthorizationMiddleware
 
