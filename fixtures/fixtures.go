@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	jwt "github.com/dgrijalva/jwt-go"
 )
@@ -23,6 +24,7 @@ type FixtureContent struct {
 	TokenExpired              string
 	TokenWithInvalidAlgorithm string
 	TokenWithInvalidSignature string
+	RawRsaPublicListKeys      string
 }
 
 /*
@@ -47,6 +49,26 @@ func GetRsaPublicKey() *rsa.PublicKey {
 		panic(err)
 	}
 	return publicKey
+}
+
+/*
+GetRsaPublicKeysList returns the list of rsa public keys to verify the following tokens
+*/
+func GetRsaPublicKeysList() []*rsa.PublicKey {
+	rawPublicKeys := strings.Split(Fixtures.RawRsaPublicListKeys, ";\n")
+	publicKey1, err := jwt.ParseRSAPublicKeyFromPEM([]byte(rawPublicKeys[0]))
+	if err != nil {
+		panic(err)
+	}
+	publicKey2, err := jwt.ParseRSAPublicKeyFromPEM([]byte(rawPublicKeys[1]))
+	if err != nil {
+		panic(err)
+	}
+	publicKey3, err := jwt.ParseRSAPublicKeyFromPEM([]byte(rawPublicKeys[2]))
+	if err != nil {
+		panic(err)
+	}
+	return []*rsa.PublicKey{publicKey1, publicKey2, publicKey3}
 }
 
 /*

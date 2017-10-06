@@ -8,15 +8,28 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/transcovo/go-chpr-middlewares/fixtures"
 )
 
-func TestMiddleware_Unauthorized(t *testing.T) {
+func TestMiddleware_OneKeyUnauthorized(t *testing.T) {
 	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
+
+	recorder := httptest.NewRecorder()
+	wrappedHandler(recorder, &http.Request{})
+	res := recorder.Result()
+	assert.Equal(t, 401, res.StatusCode)
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Equal(t, "Unauthorized\n", string(body))
+}
+
+func TestMiddleware_ListKeysUnauthorized(t *testing.T) {
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{})
+	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
+
 	recorder := httptest.NewRecorder()
 	wrappedHandler(recorder, &http.Request{})
 	res := recorder.Result()
@@ -27,6 +40,17 @@ func TestMiddleware_Unauthorized(t *testing.T) {
 
 func TestMiddleware_ValidToken(t *testing.T) {
 	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
+	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
+
+	recorder := httptest.NewRecorder()
+	headers := http.Header{"Authorization": {"Bearer " + fixtures.Fixtures.TokenValidWithRiderRole}}
+	wrappedHandler(recorder, &http.Request{Header: headers})
+	res := recorder.Result()
+	assert.Equal(t, 200, res.StatusCode)
+}
+
+func TestMiddleware_ListKeysValidTokenWithThirdKey(t *testing.T) {
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{})
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
 	recorder := httptest.NewRecorder()
@@ -71,14 +95,21 @@ func TestMiddleware_IgnoredAuthenticationForDevelopmentMode(t *testing.T) {
 	assert.Equal(t, "", string(body))
 }
 
-func TestParsePublicKey_ValidKey(t *testing.T) {
-	parsed := parsePublicKey(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
-	assert.Equal(t, fixtures.GetRsaPublicKey(), parsed)
+func TestParsePublicKeysList_ValidKey(t *testing.T) {
+	parsed := parsePublicKeysList(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
+	assert.Len(t, parsed, 1)
+	assert.Equal(t, fixtures.GetRsaPublicKey(), parsed[0])
 }
 
-func TestParsePublicKey_InvalidKey(t *testing.T) {
+func TestParsePublicKeysList_ValidListKeys(t *testing.T) {
+	parsed := parsePublicKeysList(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{})
+	assert.Len(t, parsed, 3)
+	assert.Equal(t, fixtures.GetRsaPublicKeysList(), parsed)
+}
+
+func TestParsePublicKeysList_InvalidKey(t *testing.T) {
 	parseInvalidKey := func() {
-		parsePublicKey("not a key !", &logrus.Logger{})
+		parsePublicKeysList("not a key !", &logrus.Logger{})
 	}
 	assert.Panics(t, parseInvalidKey)
 }

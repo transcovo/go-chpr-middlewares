@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
@@ -86,42 +87,58 @@ const tokenClaimsContextKey = contextKey("TokenClaims")
 
 var bearerRegex = regexp.MustCompile(`^Bearer\s(\S+)$`)
 
+const publicKeysSeparator = ";\n"
+
 /*
 JwtAuthenticationMiddleware returns a middleware that:
-- checks the Token from the Authorization header with a public key (format "Bearer token")
+- checks the Token from the Authorization header with a list of public keys (format "Bearer token")
 - replies a 401 Unauthorized if it could not find a valid token (missing, expired, bad signature)
 - parses the claims and add them to the request context if the token is valid
-Panics if fails to parse the public key
+Panics if fails to parse the list of public keys
 */
-func JwtAuthenticationMiddleware(publicKeyString string, logger *logrus.Logger) Middleware {
+func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.Logger) Middleware {
 	if IsAuthIgnored() {
 		logger.Warn("[JwtAuthenticationMiddleware] Authentication is ignored (IGNORE_AUTH sets to true)")
 		return NoopMiddleware
 	}
 
-	publicKey := parsePublicKey(publicKeyString, logger)
+	publicKeys := parsePublicKeysList(publicKeysListAsString, logger)
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
 			token := retrieveTokenFromHeader(req)
-			claims, err := validateTokenAndExtractClaims(token, publicKey)
-			if err != nil {
-				respond401Unauthorized(res)
+			for _, publicKey := range publicKeys {
+				claims, err := validateTokenAndExtractClaims(token, publicKey)
+				if err != nil {
+					// Try to decode with the following key
+					continue
+				}
+				ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
+				req = req.WithContext(ctx)
+				// Once decoded with one key, no need to continue trying with other keys
+				next(res, req)
 				return
 			}
-			ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
-			req = req.WithContext(ctx)
-			next(res, req)
+			respond401Unauthorized(res)
 		}
 	}
 }
 
-func parsePublicKey(publicKeyString string, logger *logrus.Logger) *rsa.PublicKey {
-	publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(publicKeyString))
-	if err != nil {
-		logger.WithField("err", err).Error("[JwtAuthenticationMiddleware] Failed to parse public key")
-		panic(err)
+func parsePublicKeysList(publicKeysListAsString string, logger *logrus.Logger) []*rsa.PublicKey {
+	publicKeys := strings.Split(publicKeysListAsString, publicKeysSeparator)
+	parsedPublicKeys := make([]*rsa.PublicKey, len(publicKeys))
+
+	for i, publicKeyString := range publicKeys {
+		publicKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(publicKeyString))
+		if err != nil {
+			logger.WithFields(logrus.Fields{
+				"err":   err,
+				"index": i,
+			}).Error("[JwtAuthenticationMiddleware] Failed to parse public key")
+			panic(err)
+		}
+		parsedPublicKeys[i] = publicKey
 	}
-	return publicKey
+	return parsedPublicKeys
 }
 
 /*
