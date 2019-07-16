@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 
@@ -106,6 +107,24 @@ func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.L
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
 			token := retrieveTokenFromHeader(req)
+			if !IsVerifyToken() {
+				parsed, _, err :=  new(jwt.Parser).ParseUnverified(string(token), &TokenClaims{});
+
+				if err != nil {
+					respond401Unauthorized(res)
+					return
+				}
+
+				claims, _ := extractClaims(parsed)
+
+				ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
+				req = req.WithContext(ctx)
+
+				// Once decoded with one key, no need to continue trying with other keys
+				next(res, req)
+				return
+			}
+
 			for _, publicKey := range publicKeys {
 				claims, err := validateTokenAndExtractClaims(token, publicKey)
 				if err != nil {
@@ -118,6 +137,7 @@ func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.L
 				next(res, req)
 				return
 			}
+
 			respond401Unauthorized(res)
 		}
 	}
@@ -174,10 +194,12 @@ func validateTokenAndExtractClaims(token rawToken, publicKey *rsa.PublicKey) (*T
 }
 
 func extractClaims(parsed *jwt.Token) (*TokenClaims, error) {
-	if !parsed.Valid {
+	if !parsed.Valid && IsVerifyToken() {
 		return nil, ErrInvalidToken
 	}
+
 	claims, ok := parsed.Claims.(*TokenClaims)
+
 	if !ok {
 		return nil, ErrInvalidClaims
 	}
@@ -198,4 +220,11 @@ func GetClaims(request *http.Request) *TokenClaims {
 		return claims
 	}
 	return nil
+}
+
+/*
+IsVerifyToken is true when the AUTHENTICATION_VERIFY_TOKEN_SIGNATURE is properly set
+*/
+func IsVerifyToken() bool {
+	return os.Getenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE") == "true"
 }

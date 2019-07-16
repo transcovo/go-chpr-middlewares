@@ -8,13 +8,14 @@ import (
 	"os"
 	"testing"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/transcovo/go-chpr-middlewares/fixtures"
 )
 
 func TestMiddleware_OneKeyUnauthorized(t *testing.T) {
+	os.Setenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE", "true")
 	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
@@ -32,6 +33,23 @@ func TestMiddleware_ListKeysUnauthorized(t *testing.T) {
 
 	recorder := httptest.NewRecorder()
 	wrappedHandler(recorder, &http.Request{})
+	res := recorder.Result()
+	assert.Equal(t, 401, res.StatusCode)
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Equal(t, "Unauthorized\n", string(body))
+}
+
+func TestMiddleware_Unathorized_WhenClaimsCannotBeExtract_WithoutVerifyToken(t *testing.T) {
+	os.Setenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE", "false")
+	defer os.Setenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE", "true")
+
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{})
+	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
+
+	recorder := httptest.NewRecorder()
+	headers := http.Header{"Authorization": {"Bearer token"}}
+	wrappedHandler(recorder, &http.Request{Header: headers})
+
 	res := recorder.Result()
 	assert.Equal(t, 401, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)
@@ -76,6 +94,26 @@ func TestMiddleWare_StoreInformationInRequestcontext(t *testing.T) {
 	storedClaims := modifiedRequest.Context().Value(tokenClaimsContextKey).(*TokenClaims)
 	assert.Equal(t, []Role{{Name: "cp:client:rider:"}}, storedClaims.Roles)
 	assert.Equal(t, "Alfred Bernard", storedClaims.DisplayName)
+}
+
+func TestMiddleWare_StoreInformationInRequestcontext_WithoutVerifyToken_WithExpiredToken(t *testing.T) {
+	os.Setenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE", "false")
+	defer os.Setenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE", "true")
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
+	modifiedRequest := &http.Request{}
+	fakeHandler := func(res http.ResponseWriter, req *http.Request) {
+		modifiedRequest = req
+	}
+
+	wrappedHandler := jwtMiddleware(fakeHandler)
+	headers := http.Header{"Authorization": {"Bearer " + fixtures.Fixtures.TokenExpired}}
+	initialRequest := &http.Request{Header: headers}
+	recorder := httptest.NewRecorder()
+	wrappedHandler(recorder, initialRequest)
+
+	storedClaims := modifiedRequest.Context().Value(tokenClaimsContextKey).(*TokenClaims)
+	assert.Equal(t, []Role{{Name: "cp:client:rider:"}}, storedClaims.Roles)
+	assert.Equal(t, "Carl De la Batte", storedClaims.DisplayName)
 }
 
 func TestMiddleware_IgnoredAuthenticationForDevelopmentMode(t *testing.T) {
