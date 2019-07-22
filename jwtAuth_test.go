@@ -15,7 +15,6 @@ import (
 )
 
 func TestMiddleware_OneKeyUnauthorized(t *testing.T) {
-	os.Setenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE", "true")
 	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 

@@ -107,7 +107,7 @@ func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.L
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
 			token := retrieveTokenFromHeader(req)
-			if !IsVerifyToken() {
+			if !ShouldVerifyToken() {
 				parsed, _, err :=  new(jwt.Parser).ParseUnverified(string(token), &TokenClaims{});
 
 				if err != nil {
@@ -194,7 +194,7 @@ func validateTokenAndExtractClaims(token rawToken, publicKey *rsa.PublicKey) (*T
 }
 
 func extractClaims(parsed *jwt.Token) (*TokenClaims, error) {
-	if !parsed.Valid && IsVerifyToken() {
+	if ShouldVerifyToken() && !parsed.Valid {
 		return nil, ErrInvalidToken
 	}
 
@@ -223,8 +223,8 @@ func GetClaims(request *http.Request) *TokenClaims {
 }
 
 /*
-IsVerifyToken is true when the AUTHENTICATION_VERIFY_TOKEN_SIGNATURE is properly set
+ShouldVerifyToken is true when the AUTHENTICATION_VERIFY_TOKEN_SIGNATURE is properly set
 */
-func IsVerifyToken() bool {
-	return os.Getenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE") == "true"
+func ShouldVerifyToken() bool {
+	return os.Getenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE") != "false"
 }
