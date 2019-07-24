@@ -15,7 +15,7 @@ import (
 )
 
 func TestMiddleware_OneKeyUnauthorized(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{}, true, false)
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
 	recorder := httptest.NewRecorder()
@@ -27,7 +27,7 @@ func TestMiddleware_OneKeyUnauthorized(t *testing.T) {
 }
 
 func TestMiddleware_ListKeysUnauthorized(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{}, true, false)
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
 	recorder := httptest.NewRecorder()
@@ -39,10 +39,7 @@ func TestMiddleware_ListKeysUnauthorized(t *testing.T) {
 }
 
 func TestMiddleware_Unathorized_WhenClaimsCannotBeExtract_WithoutVerifyToken(t *testing.T) {
-	os.Setenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE", "false")
-	defer os.Setenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE", "true")
-
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{}, false, false)
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
 	recorder := httptest.NewRecorder()
@@ -56,7 +53,7 @@ func TestMiddleware_Unathorized_WhenClaimsCannotBeExtract_WithoutVerifyToken(t *
 }
 
 func TestMiddleware_ValidToken(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{}, true, false)
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
 	recorder := httptest.NewRecorder()
@@ -67,7 +64,7 @@ func TestMiddleware_ValidToken(t *testing.T) {
 }
 
 func TestMiddleware_ListKeysValidTokenWithThirdKey(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{}, true, false)
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
 	recorder := httptest.NewRecorder()
@@ -78,7 +75,7 @@ func TestMiddleware_ListKeysValidTokenWithThirdKey(t *testing.T) {
 }
 
 func TestMiddleWare_StoreInformationInRequestcontext(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{}, true, false)
 	modifiedRequest := &http.Request{}
 	fakeHandler := func(res http.ResponseWriter, req *http.Request) {
 		modifiedRequest = req
@@ -95,10 +92,26 @@ func TestMiddleWare_StoreInformationInRequestcontext(t *testing.T) {
 	assert.Equal(t, "Alfred Bernard", storedClaims.DisplayName)
 }
 
+func TestMiddleWare_StoreInformationInRequestcontext_WithVerifyToken_WithExpiredToken_IgnoreExpiration(t *testing.T) {
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{}, true, true)
+	modifiedRequest := &http.Request{}
+	fakeHandler := func(res http.ResponseWriter, req *http.Request) {
+		modifiedRequest = req
+	}
+
+	wrappedHandler := jwtMiddleware(fakeHandler)
+	headers := http.Header{"Authorization": {"Bearer " + fixtures.Fixtures.TokenExpired}}
+	initialRequest := &http.Request{Header: headers}
+	recorder := httptest.NewRecorder()
+	wrappedHandler(recorder, initialRequest)
+
+	storedClaims := modifiedRequest.Context().Value(tokenClaimsContextKey).(*TokenClaims)
+	assert.Equal(t, []Role{{Name: "cp:client:rider:"}}, storedClaims.Roles)
+	assert.Equal(t, "Carl De la Batte", storedClaims.DisplayName)
+}
+
 func TestMiddleWare_StoreInformationInRequestcontext_WithoutVerifyToken_WithExpiredToken(t *testing.T) {
-	os.Setenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE", "false")
-	defer os.Setenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE", "true")
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{}, false, false)
 	modifiedRequest := &http.Request{}
 	fakeHandler := func(res http.ResponseWriter, req *http.Request) {
 		modifiedRequest = req
@@ -120,7 +133,7 @@ func TestMiddleware_IgnoredAuthenticationForDevelopmentMode(t *testing.T) {
 	defer os.Setenv("IGNORE_AUTH", "")
 
 	// no public key is required in this case
-	jwtMiddleware := JwtAuthenticationMiddleware("", &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware("", &logrus.Logger{}, true, false)
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 	recorder := httptest.NewRecorder()
 	wrappedHandler(recorder, &http.Request{})
@@ -175,42 +188,50 @@ func TestRetrieveTokenFromHeader_Success(t *testing.T) {
 
 func TestValidateTokenAndExtractClaims_NoRsaKey(t *testing.T) {
 	validToken := rawToken(fixtures.Fixtures.TokenValidWithRiderRole)
-	claims, err := validateTokenAndExtractClaims(validToken, nil)
+	claims, err := validateTokenAndExtractClaims(validToken, nil, true, false)
 	assert.EqualError(t, err, "missing public key")
 	assert.Nil(t, claims)
 }
 
 func TestValidateTokenAndExtractClaims_Empty(t *testing.T) {
-	claims, err := validateTokenAndExtractClaims(emptyToken, fixtures.GetRsaPublicKey())
+	claims, err := validateTokenAndExtractClaims(emptyToken, fixtures.GetRsaPublicKey(), true, false)
 	assert.EqualError(t, err, "token contains an invalid number of segments")
 	assert.Nil(t, claims)
 }
 
 func TestValidateTokenAndExtractClaims_InvalidAlgorithm(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenWithInvalidAlgorithm)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey())
+	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey(), true, false)
 	assert.EqualError(t, err, "unexpected signing method: HS256")
 	assert.Nil(t, claims)
 }
 
 func TestValidateTokenAndExtractClaims_InvalidSignature(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenWithInvalidSignature)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey())
+	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey(), true, false)
 	assert.EqualError(t, err, "crypto/rsa: verification error")
 	assert.Nil(t, claims)
 }
 
 func TestValidateTokenAndExtractClaims_Expired(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenExpired)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey())
+	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey(), true, false)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "token is expired by")
 	assert.Nil(t, claims)
 }
 
+func TestValidateTokenAndExtractClaims_Expired_IgnoreExpiration(t *testing.T) {
+	token := rawToken(fixtures.Fixtures.TokenExpired)
+	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey(), true, true)
+	assert.NoError(t, err)
+	assert.NotNil(t, claims)
+	assert.Equal(t, []Role{{"cp:client:rider:"}}, claims.Roles)
+}
+
 func TestValidateTokenAndExtractClaims_ValidToken(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenValidWithRiderRole)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey())
+	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey(), true, false)
 	assert.NoError(t, err)
 	assert.NotNil(t, claims)
 	assert.Equal(t, []Role{{"cp:client:rider:"}}, claims.Roles)
@@ -218,14 +239,14 @@ func TestValidateTokenAndExtractClaims_ValidToken(t *testing.T) {
 
 func TestExtractClaims_InvalidToken(t *testing.T) {
 	jwtToken := &jwt.Token{Valid: false}
-	claims, err := extractClaims(jwtToken)
+	claims, err := extractClaims(jwtToken, true)
 	assert.EqualError(t, err, "invalid token")
 	assert.Nil(t, claims)
 }
 
 func TestExtractClaims_InvalidClaims(t *testing.T) {
 	jwtToken := &jwt.Token{Valid: true}
-	claims, err := extractClaims(jwtToken)
+	claims, err := extractClaims(jwtToken, true)
 	assert.EqualError(t, err, "invalid token claims")
 	assert.Nil(t, claims)
 }

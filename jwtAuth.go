@@ -5,13 +5,11 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
-	"net/http"
-	"os"
-	"regexp"
-	"strings"
-
 	"github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
+	"net/http"
+	"regexp"
+	"strings"
 )
 
 /*
@@ -97,7 +95,7 @@ JwtAuthenticationMiddleware returns a middleware that:
 - parses the claims and add them to the request context if the token is valid
 Panics if fails to parse the list of public keys
 */
-func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.Logger) Middleware {
+func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.Logger, isVerifyToken bool, ignoreExpiration bool) Middleware {
 	if IsAuthIgnored() {
 		logger.Warn("[JwtAuthenticationMiddleware] Authentication is ignored (IGNORE_AUTH sets to true)")
 		return NoopMiddleware
@@ -107,7 +105,7 @@ func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.L
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
 			token := retrieveTokenFromHeader(req)
-			if !ShouldVerifyToken() {
+			if !isVerifyToken {
 				parsed, _, err :=  new(jwt.Parser).ParseUnverified(string(token), &TokenClaims{});
 
 				if err != nil {
@@ -115,7 +113,7 @@ func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.L
 					return
 				}
 
-				claims, _ := extractClaims(parsed)
+				claims, _ := extractClaims(parsed, isVerifyToken)
 
 				ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
 				req = req.WithContext(ctx)
@@ -126,7 +124,7 @@ func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.L
 			}
 
 			for _, publicKey := range publicKeys {
-				claims, err := validateTokenAndExtractClaims(token, publicKey)
+				claims, err := validateTokenAndExtractClaims(token, publicKey, isVerifyToken, ignoreExpiration)
 				if err != nil {
 					// Try to decode with the following key
 					continue
@@ -177,7 +175,7 @@ func retrieveTokenFromHeader(req *http.Request) rawToken {
 	return rawToken(afterBearer[1])
 }
 
-func validateTokenAndExtractClaims(token rawToken, publicKey *rsa.PublicKey) (*TokenClaims, error) {
+func validateTokenAndExtractClaims(token rawToken, publicKey *rsa.PublicKey, isVerifyToken bool, ignoreExpiration bool) (*TokenClaims, error) {
 	if publicKey == nil {
 		return nil, ErrMissingPublicKey
 	}
@@ -187,14 +185,19 @@ func validateTokenAndExtractClaims(token rawToken, publicKey *rsa.PublicKey) (*T
 		}
 		return publicKey, nil
 	})
-	if err != nil {
+
+	v, _ := err.(*jwt.ValidationError)
+
+	if err != nil && (v.Errors != jwt.ValidationErrorExpired || !ignoreExpiration ) {
 		return nil, err
 	}
-	return extractClaims(parsed)
+
+	parsed.Valid = true;
+	return extractClaims(parsed, isVerifyToken)
 }
 
-func extractClaims(parsed *jwt.Token) (*TokenClaims, error) {
-	if ShouldVerifyToken() && !parsed.Valid {
+func extractClaims(parsed *jwt.Token, isVerifyToken bool) (*TokenClaims, error) {
+	if isVerifyToken && !parsed.Valid {
 		return nil, ErrInvalidToken
 	}
 
@@ -220,11 +223,4 @@ func GetClaims(request *http.Request) *TokenClaims {
 		return claims
 	}
 	return nil
-}
-
-/*
-ShouldVerifyToken is true when the AUTHENTICATION_VERIFY_TOKEN_SIGNATURE is properly set
-*/
-func ShouldVerifyToken() bool {
-	return os.Getenv("AUTHENTICATION_VERIFY_TOKEN_SIGNATURE") != "false"
 }

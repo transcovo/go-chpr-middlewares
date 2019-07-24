@@ -22,7 +22,7 @@ func ExampleChainMiddlewares() {
 
 	handler := ChainMiddlewares([]Middleware{
 		RecoveryMiddleware(logger),
-		JwtAuthenticationMiddleware("some public key string", logger),
+		JwtAuthenticationMiddleware("some public key string", logger, true, false),
 		RoleAuthorizationMiddleware("cp:client:rider:", "cp:employee:tech:"),
 		ParamsMiddleware(requestParamsGetter),
 	}, myHandler)
