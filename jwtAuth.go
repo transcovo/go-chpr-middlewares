@@ -105,38 +105,22 @@ func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.L
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
 			token := retrieveTokenFromHeader(req)
-			if !isVerifyToken {
-				parsed, _, err :=  new(jwt.Parser).ParseUnverified(string(token), &TokenClaims{});
 
-				if err != nil {
-					respond401Unauthorized(res)
-					return
-				}
+			parsed, err := getParsedToken(token, publicKeys, isVerifyToken, ignoreExpiration)
 
-				claims, _ := extractClaims(parsed, isVerifyToken)
-
-				ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
-				req = req.WithContext(ctx)
-
-				// Once decoded with one key, no need to continue trying with other keys
-				next(res, req)
+			if err != nil {
+				respond401Unauthorized(res)
 				return
 			}
 
-			for _, publicKey := range publicKeys {
-				claims, err := validateTokenAndExtractClaims(token, publicKey, isVerifyToken, ignoreExpiration)
-				if err != nil {
-					// Try to decode with the following key
-					continue
-				}
-				ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
-				req = req.WithContext(ctx)
-				// Once decoded with one key, no need to continue trying with other keys
-				next(res, req)
-				return
-			}
+			claims, _ := extractClaims(parsed)
 
-			respond401Unauthorized(res)
+			ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
+			req = req.WithContext(ctx)
+
+			// Once decoded with one key, no need to continue trying with other keys
+			next(res, req)
+			return
 		}
 	}
 }
@@ -175,7 +159,35 @@ func retrieveTokenFromHeader(req *http.Request) rawToken {
 	return rawToken(afterBearer[1])
 }
 
-func validateTokenAndExtractClaims(token rawToken, publicKey *rsa.PublicKey, isVerifyToken bool, ignoreExpiration bool) (*TokenClaims, error) {
+func getParsedToken(token rawToken, publicKeys []*rsa.PublicKey, isVerifyToken bool, ignoreExpiration bool)(*jwt.Token, error){
+	if !isVerifyToken {
+		parsed, _, err :=  new(jwt.Parser).ParseUnverified(string(token), &TokenClaims{});
+
+		if err != nil {
+			return nil, err
+		}
+
+		parsed.Valid = true
+		return parsed, nil
+	}
+
+	var errs error
+
+	for _, publicKey := range publicKeys {
+		parsed, err := validateToken(token, publicKey, isVerifyToken, ignoreExpiration)
+		if err != nil {
+			// Try to decode with the following key
+			errs = err
+			continue
+		}
+
+		return parsed, nil
+	}
+
+	return nil, errs
+}
+
+func validateToken(token rawToken, publicKey *rsa.PublicKey, isVerifyToken bool, ignoreExpiration bool) (*jwt.Token, error) {
 	if publicKey == nil {
 		return nil, ErrMissingPublicKey
 	}
@@ -193,11 +205,12 @@ func validateTokenAndExtractClaims(token rawToken, publicKey *rsa.PublicKey, isV
 	}
 
 	parsed.Valid = true;
-	return extractClaims(parsed, isVerifyToken)
+
+	return parsed, nil
 }
 
-func extractClaims(parsed *jwt.Token, isVerifyToken bool) (*TokenClaims, error) {
-	if isVerifyToken && !parsed.Valid {
+func extractClaims(parsed *jwt.Token) (*TokenClaims, error) {
+	if !parsed.Valid {
 		return nil, ErrInvalidToken
 	}
 

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"crypto/rsa"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -186,67 +187,95 @@ func TestRetrieveTokenFromHeader_Success(t *testing.T) {
 	assert.Equal(t, rawToken("my_token"), token)
 }
 
-func TestValidateTokenAndExtractClaims_NoRsaKey(t *testing.T) {
-	validToken := rawToken(fixtures.Fixtures.TokenValidWithRiderRole)
-	claims, err := validateTokenAndExtractClaims(validToken, nil, true, false)
-	assert.EqualError(t, err, "missing public key")
-	assert.Nil(t, claims)
-}
-
-func TestValidateTokenAndExtractClaims_Empty(t *testing.T) {
-	claims, err := validateTokenAndExtractClaims(emptyToken, fixtures.GetRsaPublicKey(), true, false)
-	assert.EqualError(t, err, "token contains an invalid number of segments")
-	assert.Nil(t, claims)
-}
-
-func TestValidateTokenAndExtractClaims_InvalidAlgorithm(t *testing.T) {
+func TestGetParsedToken_InvalidAlgorithm_WithoutVerifyToken(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenWithInvalidAlgorithm)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey(), true, false)
-	assert.EqualError(t, err, "unexpected signing method: HS256")
-	assert.Nil(t, claims)
+	publicKeys := []*rsa.PublicKey{fixtures.GetRsaPublicKey()}
+	parsed, err := getParsedToken(token, publicKeys, false, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, parsed)
+	assert.Equal(t,
+		"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaXNwbGF5X25hbWUiOiJBbGZyZWQgQmVybmFyZCIsImlhdCI6MT" +
+		"Q1MzIyNTQ3MywiaXNzIjoiNThlZjc2YWI5MGJjMTIzNDEyMzQxMjM0Iiwicm9sZXMiOlt7Im5hbWUiOiJ" +
+		"jcDpjbGllbnQ6cmlkZXI6In1dLCJzdWIiOiI1OGVmNzZhYjkwYmMxMjM0MTIzNDEyMzQifQ.s2p067HnNQAaHLZo9MFwr28zni_8gITZPB5zaBuPKHQ",
+		parsed.Raw)
 }
 
-func TestValidateTokenAndExtractClaims_InvalidSignature(t *testing.T) {
-	token := rawToken(fixtures.Fixtures.TokenWithInvalidSignature)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey(), true, false)
-	assert.EqualError(t, err, "crypto/rsa: verification error")
-	assert.Nil(t, claims)
-}
-
-func TestValidateTokenAndExtractClaims_Expired(t *testing.T) {
+func TestGetParsedToken_ExpiredToken_WithVerifyToken_WithoutIgnoreExpiration(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenExpired)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey(), true, false)
+	publicKeys := []*rsa.PublicKey{fixtures.GetRsaPublicKey()}
+	parsed, err := getParsedToken(token, publicKeys, true, false)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "token is expired by")
-	assert.Nil(t, claims)
+	assert.Nil(t, parsed)
 }
 
-func TestValidateTokenAndExtractClaims_Expired_IgnoreExpiration(t *testing.T) {
+func TestGetParsedToken_ExpiredToken_WithVerifyToken_WithIgnoreExpiration(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenExpired)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey(), true, true)
+	publicKeys := []*rsa.PublicKey{fixtures.GetRsaPublicKey()}
+	parsed, err := getParsedToken(token, publicKeys, true, true)
 	assert.NoError(t, err)
-	assert.NotNil(t, claims)
-	assert.Equal(t, []Role{{"cp:client:rider:"}}, claims.Roles)
+	assert.NotNil(t, parsed)
 }
 
-func TestValidateTokenAndExtractClaims_ValidToken(t *testing.T) {
-	token := rawToken(fixtures.Fixtures.TokenValidWithRiderRole)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey(), true, false)
+func TestValidateToken_NoRsaKey(t *testing.T) {
+	validToken := rawToken(fixtures.Fixtures.TokenValidWithRiderRole)
+	parsed, err := validateToken(validToken, nil, true, false)
+	assert.EqualError(t, err, "missing public key")
+	assert.Nil(t, parsed)
+}
+
+func TestValidateToken_Empty(t *testing.T) {
+	parsed, err := validateToken(emptyToken, fixtures.GetRsaPublicKey(), true, false)
+	assert.EqualError(t, err, "token contains an invalid number of segments")
+	assert.Nil(t, parsed)
+}
+
+func TestValidateToken_InvalidAlgorithm(t *testing.T) {
+	token := rawToken(fixtures.Fixtures.TokenWithInvalidAlgorithm)
+	parsed, err := validateToken(token, fixtures.GetRsaPublicKey(), true, true)
+	assert.EqualError(t, err, "unexpected signing method: HS256")
+	assert.Nil(t, parsed)
+}
+
+func TestValidateToken_InvalidSignature(t *testing.T) {
+	token := rawToken(fixtures.Fixtures.TokenWithInvalidSignature)
+	parsed, err := validateToken(token, fixtures.GetRsaPublicKey(), true, false)
+	assert.EqualError(t, err, "crypto/rsa: verification error")
+	assert.Nil(t, parsed)
+}
+
+func TestValidateToken_Expired(t *testing.T) {
+	token := rawToken(fixtures.Fixtures.TokenExpired)
+	parsed, err := validateToken(token, fixtures.GetRsaPublicKey(), true, false)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "token is expired by")
+	assert.Nil(t, parsed)
+}
+
+func TestValidateToken_Expired_IgnoreExpiration(t *testing.T) {
+	token := rawToken(fixtures.Fixtures.TokenExpired)
+	parsed, err := validateToken(token, fixtures.GetRsaPublicKey(), true, true)
 	assert.NoError(t, err)
-	assert.NotNil(t, claims)
-	assert.Equal(t, []Role{{"cp:client:rider:"}}, claims.Roles)
+	assert.NotNil(t, parsed)
+}
+
+func TestValidateToken_ValidToken(t *testing.T) {
+	token := rawToken(fixtures.Fixtures.TokenValidWithRiderRole)
+	parsed, err := validateToken(token, fixtures.GetRsaPublicKey(), true, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, parsed)
 }
 
 func TestExtractClaims_InvalidToken(t *testing.T) {
 	jwtToken := &jwt.Token{Valid: false}
-	claims, err := extractClaims(jwtToken, true)
+	claims, err := extractClaims(jwtToken)
 	assert.EqualError(t, err, "invalid token")
 	assert.Nil(t, claims)
 }
 
 func TestExtractClaims_InvalidClaims(t *testing.T) {
 	jwtToken := &jwt.Token{Valid: true}
-	claims, err := extractClaims(jwtToken, true)
+	claims, err := extractClaims(jwtToken)
 	assert.EqualError(t, err, "invalid token claims")
 	assert.Nil(t, claims)
 }
