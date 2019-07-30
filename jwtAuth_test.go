@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"crypto/rsa"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -112,7 +111,7 @@ func TestMiddleWare_StoreInformationInRequestcontext_WithVerifyToken_WithExpired
 }
 
 func TestMiddleWare_StoreInformationInRequestcontext_WithoutVerifyToken_WithExpiredToken(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{}, false, false)
+	jwtMiddleware := JwtAuthenticationMiddleware("", &logrus.Logger{}, false, false)
 	modifiedRequest := &http.Request{}
 	fakeHandler := func(res http.ResponseWriter, req *http.Request) {
 		modifiedRequest = req
@@ -189,8 +188,8 @@ func TestRetrieveTokenFromHeader_Success(t *testing.T) {
 
 func TestGetParsedToken_InvalidAlgorithm_WithoutVerifyToken(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenWithInvalidAlgorithm)
-	publicKeys := []*rsa.PublicKey{fixtures.GetRsaPublicKey()}
-	parsed, err := getParsedToken(token, publicKeys, false, false)
+	rawPublicKey := fixtures.Fixtures.RawRsaPublicKey
+	parsed, err := getParsedToken(token, rawPublicKey, false, false, &logrus.Logger{})
 	assert.NoError(t, err)
 	assert.NotNil(t, parsed)
 	assert.Equal(t,
@@ -202,8 +201,8 @@ func TestGetParsedToken_InvalidAlgorithm_WithoutVerifyToken(t *testing.T) {
 
 func TestGetParsedToken_ExpiredToken_WithVerifyToken_WithoutIgnoreExpiration(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenExpired)
-	publicKeys := []*rsa.PublicKey{fixtures.GetRsaPublicKey()}
-	parsed, err := getParsedToken(token, publicKeys, true, false)
+	rawPublicKey := fixtures.Fixtures.RawRsaPublicKey
+	parsed, err := getParsedToken(token, rawPublicKey, true, false, &logrus.Logger{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "token is expired by")
 	assert.Nil(t, parsed)
@@ -211,8 +210,8 @@ func TestGetParsedToken_ExpiredToken_WithVerifyToken_WithoutIgnoreExpiration(t *
 
 func TestGetParsedToken_ExpiredToken_WithVerifyToken_WithIgnoreExpiration(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenExpired)
-	publicKeys := []*rsa.PublicKey{fixtures.GetRsaPublicKey()}
-	parsed, err := getParsedToken(token, publicKeys, true, true)
+	rawPublicKey := fixtures.Fixtures.RawRsaPublicKey
+	parsed, err := getParsedToken(token, rawPublicKey, true, true, &logrus.Logger{})
 	assert.NoError(t, err)
 	assert.NotNil(t, parsed)
 }
