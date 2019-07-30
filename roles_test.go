@@ -42,7 +42,7 @@ func TestRoleAuthorizationMiddleware_Forbidden(t *testing.T) {
 }
 
 func TestRoleAuthorizationMiddleware_ChainedSuccess(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{}, true, false)
 	employeeMiddleware := RoleAuthorizationMiddleware("cp:client:rider:")
 	wrappedHandler := jwtMiddleware(employeeMiddleware(fixtures.Fake200Handler))
 
@@ -54,7 +54,7 @@ func TestRoleAuthorizationMiddleware_ChainedSuccess(t *testing.T) {
 }
 
 func TestRoleAuthorizationMiddleware_ChainedForbidden(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{}, true, false)
 	employeeMiddleware := RoleAuthorizationMiddleware("cp:employee:")
 	wrappedHandler := jwtMiddleware(employeeMiddleware(fixtures.Fake200Handler))
 

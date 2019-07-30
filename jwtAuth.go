@@ -5,12 +5,11 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"regexp"
 	"strings"
-
-	"github.com/dgrijalva/jwt-go"
-	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -96,29 +95,30 @@ JwtAuthenticationMiddleware returns a middleware that:
 - parses the claims and add them to the request context if the token is valid
 Panics if fails to parse the list of public keys
 */
-func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.Logger) Middleware {
+func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.Logger, isVerifyToken bool, ignoreExpiration bool) Middleware {
 	if IsAuthIgnored() {
 		logger.Warn("[JwtAuthenticationMiddleware] Authentication is ignored (IGNORE_AUTH sets to true)")
 		return NoopMiddleware
 	}
 
-	publicKeys := parsePublicKeysList(publicKeysListAsString, logger)
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
 			token := retrieveTokenFromHeader(req)
-			for _, publicKey := range publicKeys {
-				claims, err := validateTokenAndExtractClaims(token, publicKey)
-				if err != nil {
-					// Try to decode with the following key
-					continue
-				}
-				ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
-				req = req.WithContext(ctx)
-				// Once decoded with one key, no need to continue trying with other keys
-				next(res, req)
+
+			parsed, err := getParsedToken(token, publicKeysListAsString, isVerifyToken, ignoreExpiration, logger)
+
+			if err != nil {
+				respond401Unauthorized(res)
 				return
 			}
-			respond401Unauthorized(res)
+
+			claims, _ := extractClaims(parsed)
+
+			ctx := context.WithValue(req.Context(), tokenClaimsContextKey, claims)
+			req = req.WithContext(ctx)
+
+			next(res, req)
+			return
 		}
 	}
 }
@@ -157,7 +157,40 @@ func retrieveTokenFromHeader(req *http.Request) rawToken {
 	return rawToken(afterBearer[1])
 }
 
-func validateTokenAndExtractClaims(token rawToken, publicKey *rsa.PublicKey) (*TokenClaims, error) {
+/*
+Get the parsed value of the given token (without the signature)
+*/
+func getParsedToken(token rawToken, publicKeysListAsString string, isVerifyToken bool, ignoreExpiration bool, logger *logrus.Logger)(*jwt.Token, error){
+	if !isVerifyToken {
+		parsed, _, err :=  new(jwt.Parser).ParseUnverified(string(token), &TokenClaims{});
+
+		if err != nil {
+			return nil, err
+		}
+
+		parsed.Valid = true
+		return parsed, nil
+	}
+
+	publicKeys := parsePublicKeysList(publicKeysListAsString, logger)
+
+	var errs error
+
+	for _, publicKey := range publicKeys {
+		parsed, err := validateToken(token, publicKey, isVerifyToken, ignoreExpiration)
+		if err != nil {
+			// Try to decode with the following key
+			errs = err
+			continue
+		}
+
+		return parsed, nil
+	}
+
+	return nil, errs
+}
+
+func validateToken(token rawToken, publicKey *rsa.PublicKey, isVerifyToken bool, ignoreExpiration bool) (*jwt.Token, error) {
 	if publicKey == nil {
 		return nil, ErrMissingPublicKey
 	}
@@ -167,17 +200,25 @@ func validateTokenAndExtractClaims(token rawToken, publicKey *rsa.PublicKey) (*T
 		}
 		return publicKey, nil
 	})
-	if err != nil {
+
+	v, _ := err.(*jwt.ValidationError)
+
+	if err != nil && (v.Errors != jwt.ValidationErrorExpired || !ignoreExpiration ) {
 		return nil, err
 	}
-	return extractClaims(parsed)
+
+	parsed.Valid = true;
+
+	return parsed, nil
 }
 
 func extractClaims(parsed *jwt.Token) (*TokenClaims, error) {
 	if !parsed.Valid {
 		return nil, ErrInvalidToken
 	}
+
 	claims, ok := parsed.Claims.(*TokenClaims)
+
 	if !ok {
 		return nil, ErrInvalidClaims
 	}

@@ -8,14 +8,14 @@ import (
 	"os"
 	"testing"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/transcovo/go-chpr-middlewares/fixtures"
 )
 
 func TestMiddleware_OneKeyUnauthorized(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{}, true, false)
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
 	recorder := httptest.NewRecorder()
@@ -27,7 +27,7 @@ func TestMiddleware_OneKeyUnauthorized(t *testing.T) {
 }
 
 func TestMiddleware_ListKeysUnauthorized(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{}, true, false)
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
 	recorder := httptest.NewRecorder()
@@ -38,8 +38,22 @@ func TestMiddleware_ListKeysUnauthorized(t *testing.T) {
 	assert.Equal(t, "Unauthorized\n", string(body))
 }
 
+func TestMiddleware_Unathorized_WhenClaimsCannotBeExtract_WithoutVerifyToken(t *testing.T) {
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{}, false, false)
+	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
+
+	recorder := httptest.NewRecorder()
+	headers := http.Header{"Authorization": {"Bearer token"}}
+	wrappedHandler(recorder, &http.Request{Header: headers})
+
+	res := recorder.Result()
+	assert.Equal(t, 401, res.StatusCode)
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Equal(t, "Unauthorized\n", string(body))
+}
+
 func TestMiddleware_ValidToken(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{}, true, false)
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
 	recorder := httptest.NewRecorder()
@@ -50,7 +64,7 @@ func TestMiddleware_ValidToken(t *testing.T) {
 }
 
 func TestMiddleware_ListKeysValidTokenWithThirdKey(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicListKeys, &logrus.Logger{}, true, false)
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 
 	recorder := httptest.NewRecorder()
@@ -61,7 +75,7 @@ func TestMiddleware_ListKeysValidTokenWithThirdKey(t *testing.T) {
 }
 
 func TestMiddleWare_StoreInformationInRequestcontext(t *testing.T) {
-	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{}, true, false)
 	modifiedRequest := &http.Request{}
 	fakeHandler := func(res http.ResponseWriter, req *http.Request) {
 		modifiedRequest = req
@@ -78,12 +92,48 @@ func TestMiddleWare_StoreInformationInRequestcontext(t *testing.T) {
 	assert.Equal(t, "Alfred Bernard", storedClaims.DisplayName)
 }
 
+func TestMiddleWare_StoreInformationInRequestcontext_WithVerifyToken_WithExpiredToken_IgnoreExpiration(t *testing.T) {
+	jwtMiddleware := JwtAuthenticationMiddleware(fixtures.Fixtures.RawRsaPublicKey, &logrus.Logger{}, true, true)
+	modifiedRequest := &http.Request{}
+	fakeHandler := func(res http.ResponseWriter, req *http.Request) {
+		modifiedRequest = req
+	}
+
+	wrappedHandler := jwtMiddleware(fakeHandler)
+	headers := http.Header{"Authorization": {"Bearer " + fixtures.Fixtures.TokenExpired}}
+	initialRequest := &http.Request{Header: headers}
+	recorder := httptest.NewRecorder()
+	wrappedHandler(recorder, initialRequest)
+
+	storedClaims := modifiedRequest.Context().Value(tokenClaimsContextKey).(*TokenClaims)
+	assert.Equal(t, []Role{{Name: "cp:client:rider:"}}, storedClaims.Roles)
+	assert.Equal(t, "Carl De la Batte", storedClaims.DisplayName)
+}
+
+func TestMiddleWare_StoreInformationInRequestcontext_WithoutVerifyToken_WithExpiredToken(t *testing.T) {
+	jwtMiddleware := JwtAuthenticationMiddleware("", &logrus.Logger{}, false, false)
+	modifiedRequest := &http.Request{}
+	fakeHandler := func(res http.ResponseWriter, req *http.Request) {
+		modifiedRequest = req
+	}
+
+	wrappedHandler := jwtMiddleware(fakeHandler)
+	headers := http.Header{"Authorization": {"Bearer " + fixtures.Fixtures.TokenExpired}}
+	initialRequest := &http.Request{Header: headers}
+	recorder := httptest.NewRecorder()
+	wrappedHandler(recorder, initialRequest)
+
+	storedClaims := modifiedRequest.Context().Value(tokenClaimsContextKey).(*TokenClaims)
+	assert.Equal(t, []Role{{Name: "cp:client:rider:"}}, storedClaims.Roles)
+	assert.Equal(t, "Carl De la Batte", storedClaims.DisplayName)
+}
+
 func TestMiddleware_IgnoredAuthenticationForDevelopmentMode(t *testing.T) {
 	os.Setenv("IGNORE_AUTH", "true")
 	defer os.Setenv("IGNORE_AUTH", "")
 
 	// no public key is required in this case
-	jwtMiddleware := JwtAuthenticationMiddleware("", &logrus.Logger{})
+	jwtMiddleware := JwtAuthenticationMiddleware("", &logrus.Logger{}, true, false)
 	wrappedHandler := jwtMiddleware(fixtures.Fake200Handler)
 	recorder := httptest.NewRecorder()
 	wrappedHandler(recorder, &http.Request{})
@@ -136,47 +186,83 @@ func TestRetrieveTokenFromHeader_Success(t *testing.T) {
 	assert.Equal(t, rawToken("my_token"), token)
 }
 
-func TestValidateTokenAndExtractClaims_NoRsaKey(t *testing.T) {
-	validToken := rawToken(fixtures.Fixtures.TokenValidWithRiderRole)
-	claims, err := validateTokenAndExtractClaims(validToken, nil)
-	assert.EqualError(t, err, "missing public key")
-	assert.Nil(t, claims)
-}
-
-func TestValidateTokenAndExtractClaims_Empty(t *testing.T) {
-	claims, err := validateTokenAndExtractClaims(emptyToken, fixtures.GetRsaPublicKey())
-	assert.EqualError(t, err, "token contains an invalid number of segments")
-	assert.Nil(t, claims)
-}
-
-func TestValidateTokenAndExtractClaims_InvalidAlgorithm(t *testing.T) {
+func TestGetParsedToken_InvalidAlgorithm_WithoutVerifyToken(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenWithInvalidAlgorithm)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey())
-	assert.EqualError(t, err, "unexpected signing method: HS256")
-	assert.Nil(t, claims)
+	rawPublicKey := fixtures.Fixtures.RawRsaPublicKey
+	parsed, err := getParsedToken(token, rawPublicKey, false, false, &logrus.Logger{})
+	assert.NoError(t, err)
+	assert.NotNil(t, parsed)
+	assert.Equal(t,
+		"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkaXNwbGF5X25hbWUiOiJBbGZyZWQgQmVybmFyZCIsImlhdCI6MT" +
+		"Q1MzIyNTQ3MywiaXNzIjoiNThlZjc2YWI5MGJjMTIzNDEyMzQxMjM0Iiwicm9sZXMiOlt7Im5hbWUiOiJ" +
+		"jcDpjbGllbnQ6cmlkZXI6In1dLCJzdWIiOiI1OGVmNzZhYjkwYmMxMjM0MTIzNDEyMzQifQ.s2p067HnNQAaHLZo9MFwr28zni_8gITZPB5zaBuPKHQ",
+		parsed.Raw)
 }
 
-func TestValidateTokenAndExtractClaims_InvalidSignature(t *testing.T) {
-	token := rawToken(fixtures.Fixtures.TokenWithInvalidSignature)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey())
-	assert.EqualError(t, err, "crypto/rsa: verification error")
-	assert.Nil(t, claims)
-}
-
-func TestValidateTokenAndExtractClaims_Expired(t *testing.T) {
+func TestGetParsedToken_ExpiredToken_WithVerifyToken_WithoutIgnoreExpiration(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenExpired)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey())
+	rawPublicKey := fixtures.Fixtures.RawRsaPublicKey
+	parsed, err := getParsedToken(token, rawPublicKey, true, false, &logrus.Logger{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "token is expired by")
-	assert.Nil(t, claims)
+	assert.Nil(t, parsed)
 }
 
-func TestValidateTokenAndExtractClaims_ValidToken(t *testing.T) {
-	token := rawToken(fixtures.Fixtures.TokenValidWithRiderRole)
-	claims, err := validateTokenAndExtractClaims(token, fixtures.GetRsaPublicKey())
+func TestGetParsedToken_ExpiredToken_WithVerifyToken_WithIgnoreExpiration(t *testing.T) {
+	token := rawToken(fixtures.Fixtures.TokenExpired)
+	rawPublicKey := fixtures.Fixtures.RawRsaPublicKey
+	parsed, err := getParsedToken(token, rawPublicKey, true, true, &logrus.Logger{})
 	assert.NoError(t, err)
-	assert.NotNil(t, claims)
-	assert.Equal(t, []Role{{"cp:client:rider:"}}, claims.Roles)
+	assert.NotNil(t, parsed)
+}
+
+func TestValidateToken_NoRsaKey(t *testing.T) {
+	validToken := rawToken(fixtures.Fixtures.TokenValidWithRiderRole)
+	parsed, err := validateToken(validToken, nil, true, false)
+	assert.EqualError(t, err, "missing public key")
+	assert.Nil(t, parsed)
+}
+
+func TestValidateToken_Empty(t *testing.T) {
+	parsed, err := validateToken(emptyToken, fixtures.GetRsaPublicKey(), true, false)
+	assert.EqualError(t, err, "token contains an invalid number of segments")
+	assert.Nil(t, parsed)
+}
+
+func TestValidateToken_InvalidAlgorithm(t *testing.T) {
+	token := rawToken(fixtures.Fixtures.TokenWithInvalidAlgorithm)
+	parsed, err := validateToken(token, fixtures.GetRsaPublicKey(), true, true)
+	assert.EqualError(t, err, "unexpected signing method: HS256")
+	assert.Nil(t, parsed)
+}
+
+func TestValidateToken_InvalidSignature(t *testing.T) {
+	token := rawToken(fixtures.Fixtures.TokenWithInvalidSignature)
+	parsed, err := validateToken(token, fixtures.GetRsaPublicKey(), true, false)
+	assert.EqualError(t, err, "crypto/rsa: verification error")
+	assert.Nil(t, parsed)
+}
+
+func TestValidateToken_Expired(t *testing.T) {
+	token := rawToken(fixtures.Fixtures.TokenExpired)
+	parsed, err := validateToken(token, fixtures.GetRsaPublicKey(), true, false)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "token is expired by")
+	assert.Nil(t, parsed)
+}
+
+func TestValidateToken_Expired_IgnoreExpiration(t *testing.T) {
+	token := rawToken(fixtures.Fixtures.TokenExpired)
+	parsed, err := validateToken(token, fixtures.GetRsaPublicKey(), true, true)
+	assert.NoError(t, err)
+	assert.NotNil(t, parsed)
+}
+
+func TestValidateToken_ValidToken(t *testing.T) {
+	token := rawToken(fixtures.Fixtures.TokenValidWithRiderRole)
+	parsed, err := validateToken(token, fixtures.GetRsaPublicKey(), true, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, parsed)
 }
 
 func TestExtractClaims_InvalidToken(t *testing.T) {
