@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"crypto/rsa"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -188,8 +189,8 @@ func TestRetrieveTokenFromHeader_Success(t *testing.T) {
 
 func TestGetParsedToken_InvalidAlgorithm_WithoutVerifyToken(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenWithInvalidAlgorithm)
-	rawPublicKey := fixtures.Fixtures.RawRsaPublicKey
-	parsed, err := getParsedToken(token, rawPublicKey, false, false, &logrus.Logger{})
+	publicKeys := []*rsa.PublicKey {}
+	parsed, err := getParsedToken(token, publicKeys, false, false, &logrus.Logger{})
 	assert.NoError(t, err)
 	assert.NotNil(t, parsed)
 	assert.Equal(t,
@@ -201,8 +202,8 @@ func TestGetParsedToken_InvalidAlgorithm_WithoutVerifyToken(t *testing.T) {
 
 func TestGetParsedToken_ExpiredToken_WithVerifyToken_WithoutIgnoreExpiration(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenExpired)
-	rawPublicKey := fixtures.Fixtures.RawRsaPublicKey
-	parsed, err := getParsedToken(token, rawPublicKey, true, false, &logrus.Logger{})
+	publicKeys := fixtures.GetRsaPublicKeysList()
+	parsed, err := getParsedToken(token, publicKeys, true, false, &logrus.Logger{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "token is expired by")
 	assert.Nil(t, parsed)
@@ -210,8 +211,8 @@ func TestGetParsedToken_ExpiredToken_WithVerifyToken_WithoutIgnoreExpiration(t *
 
 func TestGetParsedToken_ExpiredToken_WithVerifyToken_WithIgnoreExpiration(t *testing.T) {
 	token := rawToken(fixtures.Fixtures.TokenExpired)
-	rawPublicKey := fixtures.Fixtures.RawRsaPublicKey
-	parsed, err := getParsedToken(token, rawPublicKey, true, true, &logrus.Logger{})
+	publicKeys := fixtures.GetRsaPublicKeysList()
+	parsed, err := getParsedToken(token, publicKeys, true, true, &logrus.Logger{})
 	assert.NoError(t, err)
 	assert.NotNil(t, parsed)
 }

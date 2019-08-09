@@ -100,12 +100,18 @@ func JwtAuthenticationMiddleware(publicKeysListAsString string, logger *logrus.L
 		logger.Warn("[JwtAuthenticationMiddleware] Authentication is ignored (IGNORE_AUTH sets to true)")
 		return NoopMiddleware
 	}
+	publicKeys := []*rsa.PublicKey {}
+
+	// Only parsing the publicKeys when isVerifyToken is true
+	if isVerifyToken {
+		publicKeys = parsePublicKeysList(publicKeysListAsString, logger)
+	}
 
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(res http.ResponseWriter, req *http.Request) {
 			token := retrieveTokenFromHeader(req)
 
-			parsed, err := getParsedToken(token, publicKeysListAsString, isVerifyToken, ignoreExpiration, logger)
+			parsed, err := getParsedToken(token, publicKeys, isVerifyToken, ignoreExpiration, logger)
 
 			if err != nil {
 				respond401Unauthorized(res)
@@ -160,7 +166,7 @@ func retrieveTokenFromHeader(req *http.Request) rawToken {
 /*
 Get the parsed value of the given token (without the signature)
 */
-func getParsedToken(token rawToken, publicKeysListAsString string, isVerifyToken bool, ignoreExpiration bool, logger *logrus.Logger)(*jwt.Token, error){
+func getParsedToken(token rawToken, publicKeys []*rsa.PublicKey, isVerifyToken bool, ignoreExpiration bool, logger *logrus.Logger)(*jwt.Token, error){
 	if !isVerifyToken {
 		parsed, _, err :=  new(jwt.Parser).ParseUnverified(string(token), &TokenClaims{});
 
@@ -171,8 +177,6 @@ func getParsedToken(token rawToken, publicKeysListAsString string, isVerifyToken
 		parsed.Valid = true
 		return parsed, nil
 	}
-
-	publicKeys := parsePublicKeysList(publicKeysListAsString, logger)
 
 	var errs error
 
